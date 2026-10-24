@@ -75,8 +75,8 @@ module.exports = {
     doNotFollow: { path: "node_modules" },
     exclude: { path: "(^|/)(node_modules|dist|storybook-static)/" },
     // typescript 7 has no JS API yet, so dependency-cruiser parses TS with swc instead.
+    // swc reads the source before type erasure, so `import type` edges are still checked.
     parser: "swc",
-    tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       exportsFields: ["exports"],
       conditionNames: ["import", "require", "node", "default", "types"],

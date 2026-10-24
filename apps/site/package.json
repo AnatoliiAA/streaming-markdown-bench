@@ -1,0 +1,7 @@
+{
+  "name": "@smb/site",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": { "@smb/ui": "workspace:*", "@smb/bench": "workspace:*" }
+}

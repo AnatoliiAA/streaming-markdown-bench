@@ -9,34 +9,35 @@ One fast pass over a finished component, in a fresh context. You are read-only o
 
 ## Step 0 - Gate: is it a component?
 
-Decide first, from the diff.
+Decide first, from the diff. When unsure whether it is a component, treat it as one (full review).
 
 | Component (review it) | Not a component (no review) |
 | --- | --- |
 | DS component (`Slider`), bench detector, adapter, runner pass, FSD slice (`features/replay-speed`) | Config tweak, copy change, a prop added to an existing component, one-line script |
 
-Not a component: run `bun run check` (plus `bun run test:browser` if UI or the harness changed), reply with exactly one line and stop. No nits, no follow-ups, no suggestions.
+Not a component: run `bun run check` (plus `bun run test:browser` per Axis 1), reply with exactly one line and stop. No nits, no follow-ups, no suggestions. On FAIL, classify the failure with the base procedure below.
 
 ```
-not a component — check: PASS|FAIL
+not a component — check: PASS
+not a component — check: FAIL — <failing step>: caused-by-diff | pre-existing
 ```
 
 ## Inputs
 
-- The diff: `git diff --staged`, or a range `git diff <base>..<head>`. Note `<base>`.
+- The diff: `git diff --staged` (base = `HEAD`), or a commit range `git diff <base>..<head>` (base = the range's first commit's parent, as given). The base worktree below is created at that base.
 - The plan task text (requirements the component must meet).
 
 ## Axis 1 - Regressions
 
 | Check | How |
 | --- | --- |
-| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun test && bun run lint:arch`). Add `bun run test:browser` if UI or harness changed (not part of check). |
+| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun test && bun run lint:arch`). Run `bun run test:browser` (not part of check) when the diff touches `packages/ui/**`, `apps/site/**`, `tests/browser/**` or `playwright.config.ts`. If it cannot run (no browser installed), say so in `evidence:`; never skip silently. |
 | Public API | `git diff` on every `index.ts`: for each renamed/removed/changed export, grep all consumers; a stale consumer is a break (`tsc` shows it) |
 | Outside behavior | Files changed outside the component are justified by the task |
 
 ### Failure you think is unrelated to the diff
 
-Do not guess. Classify it against the base:
+Do not guess. A failure counts as pre-existing only after it was reproduced at base; never classify without running it there.
 
 1. `git worktree add <tmp> <base>` (a path outside the repo) and `bun install --frozen-lockfile` there.
 2. Run just the failing test/command in `<tmp>`.
@@ -45,6 +46,8 @@ Do not guess. Classify it against the base:
 Fails at base too = pre-existing: report ONE nit line, not must-fix. Passes at base = caused by the diff: must-fix.
 
 ## Axis 2 - Code quality
+
+Findings are about code in the diff only; pre-existing issues outside the diff are out of scope.
 
 - [ ] Naming: clear, matches repo conventions
 - [ ] Size: no oversized function/file; one responsibility
@@ -84,10 +87,11 @@ must-fix:
 nit:
 - <file:line> <problem>
 verdict: PASS | FIX-REQUIRED
+evidence: (optional, ≤ 5 lines: commands run + PASS/FAIL)
 ```
 
 - `PASS` only when must-fix is empty (write `- none`); otherwise `FIX-REQUIRED`.
-- One pass, at most 15 findings, one line each. No prose summary, no "optional follow-ups", no praise section.
+- One pass, at most 15 findings, one line each. If more, keep all must-fix first, then truncate nits. No prose summary, no "optional follow-ups", no praise section. `evidence:` is a command list, not a summary.
 
 ## Rules
 

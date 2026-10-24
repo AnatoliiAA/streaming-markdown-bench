@@ -99,10 +99,12 @@ test("workspace packages resolve by name", async () => {
   for (const p of ["@smb/ui", "@smb/bench"]) expect(await import(p)).toBeDefined();
 });
 test("DOM globals are preloaded", () => {
-  const el = document.createElement("div"); el.textContent = "x";
+  const el = document.createElement("div");
+  el.textContent = "x";
   expect(el.outerHTML).toBe("<div>x</div>");
 });
 ```
+
 - [ ] **Step 3: Run** `bun test tests/tooling/workspace.test.ts`. Expected: FAIL (no workspaces, no `document`).
 - [ ] **Step 4: Implement** the root config:
   - root `package.json`: `workspaces`, `packageManager`, devDeps `typescript`, `@types/bun`, `@happy-dom/global-registrator`;
@@ -138,19 +140,23 @@ test("DOM globals are preloaded", () => {
 ```ts
 test("badly formatted source fails biome ci", async () => {
   await withFile("packages/bench/src/bad.ts", "export const  a=1", async () =>
-    expect((await run(["bunx", "biome", "ci", "packages/bench/src/bad.ts"])).code).not.toBe(0));
+    expect((await run(["bunx", "biome", "ci", "packages/bench/src/bad.ts"])).code).not.toBe(0),
+  );
 });
 test("well formatted source passes", async () => {
   await withFile("packages/bench/src/good.ts", 'export const a = "x";\n', async () =>
-    expect((await run(["bunx", "biome", "ci", "packages/bench/src/good.ts"])).code).toBe(0));
+    expect((await run(["bunx", "biome", "ci", "packages/bench/src/good.ts"])).code).toBe(0),
+  );
 });
 test("generated folders are ignored", async () => {
   await withFile("packages/ui/dist/x.js", "const  a=1", async () =>
-    expect((await run(["bunx", "biome", "ci", "."])).code).toBe(0));
+    expect((await run(["bunx", "biome", "ci", "."])).code).toBe(0),
+  );
 });
 test("CRLF is rejected", async () => {
   await withFile("packages/bench/src/crlf.ts", 'export const a = "x";\r\n', async () =>
-    expect((await run(["bunx", "biome", "ci", "packages/bench/src/crlf.ts"])).code).not.toBe(0));
+    expect((await run(["bunx", "biome", "ci", "packages/bench/src/crlf.ts"])).code).not.toBe(0),
+  );
 });
 ```
 (`withFile(path, content, fn)` lives in `tests/tooling/run.ts`; add it there.)
@@ -175,8 +181,8 @@ test("CRLF is rejected", async () => {
 
 ```ts
 test("fresh clone installs hooks", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "smb clone "));        // space in path on purpose
-  await run(["git", "clone", "--quiet", repoRoot, dir]);              // clones HEAD of the current branch
+  const dir = await mkdtemp(join(tmpdir(), "smb clone ")); // space in path on purpose
+  await run(["git", "clone", "--quiet", repoRoot, dir]); // clones HEAD of the current branch
   expect((await run(["bun", "install"], { cwd: dir })).code).toBe(0);
   expect(existsSync(join(dir, ".git/hooks/pre-commit"))).toBe(true);
 }, 120_000);
@@ -185,6 +191,7 @@ test("commit with badly formatted staged file is blocked", async () => {
   expect(commit.code).not.toBe(0);
 }, 120_000);
 ```
+
 - [ ] **Step 2: Run** `bun test tests/tooling/hooks.test.ts`. Expected: FAIL (no hook).
 - [ ] **Step 3: Implement** `lefthook.yml` and the `prepare` script. A clone only sees committed files, so commit `lefthook.yml` + `package.json` + `bun.lock` as a WIP commit before re-running the test.
 - [ ] **Step 4: Run** `bun test tests/tooling/hooks.test.ts`. Expected: PASS. Then run `bun run check`. Expected: exit 0.
@@ -207,24 +214,28 @@ test("commit with badly formatted staged file is blocked", async () => {
 
 ```ts
 const VIOLATIONS: [file: string, source: string, why: string][] = [
-  ["packages/ui/src/x.ts",                     'import "@smb/bench";',                 "ui → bench"],
-  ["packages/ui/src/x.ts",                     'import "@smb/site";',                  "ui → site"],
-  ["packages/bench/src/metrics/x.ts",          'import "@smb/ui";',                    "bench → ui"],
-  ["packages/bench/src/metrics/x.ts",          'import "../runner";',                  "metrics → runner"],
-  ["packages/bench/src/corpus/x.ts",           'import "../metrics";',                 "corpus → metrics"],
-  ["packages/bench/src/adapters/x.ts",         'import "../harness";',                 "adapters → harness"],
-  ["packages/bench/src/harness/x.ts",          'import "../runner";',                  "harness → runner"],
-  ["packages/bench/src/runner/x.ts",           'import "../metrics/flips";',           "relative deep import"],
-  ["apps/site/src/app/x.ts",                   'import "@smb/bench/src/metrics";',     "package deep import"],
-  ["apps/site/src/entities/a/index.ts",        'import "../../features/b";',           "FSD: entities → features"],
+  ["packages/ui/src/x.ts", 'import "@smb/bench";', "ui → bench"],
+  ["packages/ui/src/x.ts", 'import "@smb/site";', "ui → site"],
+  ["packages/bench/src/metrics/x.ts", 'import "@smb/ui";', "bench → ui"],
+  ["packages/bench/src/metrics/x.ts", 'import "../runner";', "metrics → runner"],
+  ["packages/bench/src/corpus/x.ts", 'import "../metrics";', "corpus → metrics"],
+  ["packages/bench/src/adapters/x.ts", 'import "../harness";', "adapters → harness"],
+  ["packages/bench/src/harness/x.ts", 'import "../runner";', "harness → runner"],
+  ["packages/bench/src/runner/x.ts", 'import "../metrics/flips";', "relative deep import"],
+  ["apps/site/src/app/x.ts", 'import "@smb/bench/src/metrics";', "package deep import"],
+  ["apps/site/src/entities/a/index.ts", 'import "../../features/b";', "FSD: entities → features"],
 ];
 const ALLOWED: [string, string][] = [
-  ["packages/bench/src/runner/x.ts",  'import "../metrics";'],
+  ["packages/bench/src/runner/x.ts", 'import "../metrics";'],
   ["packages/bench/src/harness/x.ts", 'import "../adapters";'],
-  ["apps/site/src/app/x.ts",          'import "@smb/ui";'],
+  ["apps/site/src/app/x.ts", 'import "@smb/ui";'],
 ];
-test.each(VIOLATIONS)("%s rejects %s (%s)", async (file, src) => { /* expect check fails */ });
-test.each(ALLOWED)("%s allows %s", async (file, src) => { /* expect check passes */ });
+test.each(VIOLATIONS)("%s rejects %s (%s)", async (file, src) => {
+  /* expect check fails */
+});
+test.each(ALLOWED)("%s allows %s", async (file, src) => {
+  /* expect check passes */
+});
 ```
 The checker command is `bunx biome lint <file> && bun run lint:arch`. Imported targets that don't exist (e.g. `features/b`) are created as temporary `export {}` stubs in the same `withFile` scope.
 - [ ] **Step 2: Run** `bun test tests/tooling/boundaries.test.ts`. Expected: every `VIOLATIONS` row FAILs (nothing rejects them yet).
@@ -252,10 +263,13 @@ The checker command is `bunx biome lint <file> && bun run lint:arch`. Imported t
 
 ```ts
 test("chromium renders and runs JS", async ({ page }) => {
-  await page.setContent(`<main id="m"></main><script>document.getElementById("m").textContent = "ok"</script>`);
+  await page.setContent(
+    `<main id="m"></main><script>document.getElementById("m").textContent = "ok"</script>`,
+  );
   await expect(page.locator("#m")).toHaveText("ok");
 });
 ```
+
 - [ ] **Step 2: Run** `bunx playwright test`. Expected: FAIL (no config / no browser).
 - [ ] **Step 3: Implement** the config, then run `bunx playwright install chromium`.
 - [ ] **Step 4: Decide the runner.** Run `bun --bun x playwright test` 3 times in a row.
@@ -322,7 +336,7 @@ test("chromium renders and runs JS", async ({ page }) => {
   - (a) "In `packages/bench/src/runner`, use the flip detector from metrics to count flips for a run." Correct answer: `import { detectFlips } from "../metrics"` and export it from `metrics/index.ts`.
   - (b) "Add a 'copy results link' button to the site leaderboard." Correct answer: `features/copy-results-link`, using `shared/ui` Button, wired in `widgets/leaderboard`.
   - (c) "The leaderboard needs the Summary type." Correct answer: import from `@smb/bench` (types only), never `@smb/bench/src/...`.
-- [ ] **Step 2: Baseline (RED).** Dispatch a fresh subagent per scenario, *without* the skill and with `CLAUDE.md` absent from its prompt. Ask it to name the file paths and imports it would write (no edits). Record the answers and the deviations in the test file. Expected: at least one deviation (deep import, wrong layer, or wrong folder). If there are none, make the scenarios harder before continuing.
+- [ ] **Step 2: Baseline (RED).** Dispatch a fresh subagent per scenario, _without_ the skill and with `CLAUDE.md` absent from its prompt. Ask it to name the file paths and imports it would write (no edits). Record the answers and the deviations in the test file. Expected: at least one deviation (deep import, wrong layer, or wrong folder). If there are none, make the scenarios harder before continuing.
 - [ ] **Step 3: Write** `CLAUDE.md` and the skill.
 - [ ] **Step 4: GREEN.** Re-run the same scenarios with the skill loaded. Expected: all three correct. Record the results. Close any loophole a subagent found by editing the skill and re-running.
 - [ ] **Step 5: Run** `bun run check` (exit 0) and commit `docs: CLAUDE.md and project-architecture skill`.
@@ -345,6 +359,7 @@ test("chromium renders and runs JS", async ({ page }) => {
     - **Axis 2 — quality:** a 6-item checklist (naming, size, duplication, dead code, required error handling, tests assert behavior).
     - **Axis 3 — architecture:** a checklist derived from `project-architecture`, plus "matches the sibling components' pattern" and "no raw colors/sizes in `packages/ui`".
     - **Output format:**
+
       ```
       ## Review: <component>
       must-fix:
@@ -415,17 +430,17 @@ test("chromium renders and runs JS", async ({ page }) => {
 
 ## Spec coverage map
 
-| Spec item (workflow spec) | Task |
-|---|---|
-| §2 Stage 0 "done when": public repo | 1 |
-| Bun workspaces skeleton, strict TS | 1 |
-| Biome, `bun run check` | 2 (+4 `lint:arch`) |
-| Playwright verified under Bun | 5 |
-| Pre-commit hook | 3 |
-| CI green on PR | 6 |
-| `CLAUDE.md` | 7 |
-| Skills `project-architecture`, `component-review`, `ds-component`, tested per writing-skills | 7, 8, 9 |
-| §3.3 `main` protected, author merges | 10 |
-| §5.2 boundaries enforced (Biome → dependency-cruiser fallback, steiger) | 4 |
-| §5.4 line endings, VR baselines on Linux only | 1, 2, 9 |
-| `add-renderer-adapter` skill, DS components, Storybook | Out of scope (Stages 1–2) |
+| Spec item (workflow spec)                                                                    | Task                      |
+| -------------------------------------------------------------------------------------------- | ------------------------- |
+| §2 Stage 0 "done when": public repo                                                          | 1                         |
+| Bun workspaces skeleton, strict TS                                                           | 1                         |
+| Biome, `bun run check`                                                                       | 2 (+4 `lint:arch`)        |
+| Playwright verified under Bun                                                                | 5                         |
+| Pre-commit hook                                                                              | 3                         |
+| CI green on PR                                                                               | 6                         |
+| `CLAUDE.md`                                                                                  | 7                         |
+| Skills `project-architecture`, `component-review`, `ds-component`, tested per writing-skills | 7, 8, 9                   |
+| §3.3 `main` protected, author merges                                                         | 10                        |
+| §5.2 boundaries enforced (Biome → dependency-cruiser fallback, steiger)                      | 4                         |
+| §5.4 line endings, VR baselines on Linux only                                                | 1, 2, 9                   |
+| `add-renderer-adapter` skill, DS components, Storybook                                       | Out of scope (Stages 1–2) |

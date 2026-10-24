@@ -6,7 +6,7 @@
 
 **Goal:** One command (`pnpm bench`) replays a corpus of ≥30 markdown streams through ≥4 renderer adapters in Chromium and writes per-run result JSON plus `results/summary.json` with stability, correctness, accessibility and performance metrics.
 
-**Architecture:** Pure, unit-tested logic (case schema, chunkers, detectors, normalization, aggregation) lives in `corpus/` and `runner/metrics/`. A Vite-built harness page (`harness/`) loads exactly one adapter per page load via dynamic import and exposes `window.__bench`. The Playwright runner (`runner/`) drives that page in two passes: a deterministic *fidelity pass* (snapshot after each chunk) and a throttled *perf pass* (in-page replay, 5 runs).
+**Architecture:** Pure, unit-tested logic (case schema, chunkers, detectors, normalization, aggregation) lives in `corpus/` and `runner/metrics/`. A Vite-built harness page (`harness/`) loads exactly one adapter per page load via dynamic import and exposes `window.__bench`. The Playwright runner (`runner/`) drives that page in two passes: a deterministic _fidelity pass_ (snapshot after each chunk) and a throttled _perf pass_ (in-page replay, 5 runs).
 
 **Tech Stack:** TypeScript (strict), Node 22, pnpm workspaces (`harness` only in this plan), Vite, React 18, `playwright` (library), Vitest (+ happy-dom), `micromark` + `micromark-extension-gfm`, `hast-util-from-html`, `hast-util-to-text`, `diff`, `tsx`.
 
@@ -120,16 +120,59 @@ tests/browser/
 - [ ] **Step 2: Write failing tests** in `corpus/schema.test.ts`
 
 ```ts
-const ok = { id: "a-1", source: "synthetic", tags: [], text: "ab", chunks: [{ delta: "a", t: 0 }, { delta: "b", t: 5 }] };
+const ok = {
+  id: "a-1",
+  source: "synthetic",
+  tags: [],
+  text: "ab",
+  chunks: [
+    { delta: "a", t: 0 },
+    { delta: "b", t: 5 },
+  ],
+};
 test("accepts a valid case", () => expect(validateCase(ok).ok).toBe(true));
-test("rejects CRLF", () => expect(validateCase({ ...ok, text: "a\r\nb", chunks: [{ delta: "a\r\nb", t: 0 }] }).ok).toBe(false));
-test("rejects deltas that don't join to text", () => expect(validateCase({ ...ok, text: "abc" }).ok).toBe(false));
-test("rejects empty delta", () => expect(validateCase({ ...ok, chunks: [{ delta: "", t: 0 }, { delta: "ab", t: 1 }] }).ok).toBe(false));
-test("rejects decreasing t", () => expect(validateCase({ ...ok, chunks: [{ delta: "a", t: 5 }, { delta: "b", t: 1 }] }).ok).toBe(false));
-test("rejects non-integer or negative t", () => expect(validateCase({ ...ok, chunks: [{ delta: "a", t: -1 }, { delta: "b", t: 1.5 }] }).ok).toBe(false));
+test("rejects CRLF", () =>
+  expect(validateCase({ ...ok, text: "a\r\nb", chunks: [{ delta: "a\r\nb", t: 0 }] }).ok).toBe(
+    false,
+  ));
+test("rejects deltas that don't join to text", () =>
+  expect(validateCase({ ...ok, text: "abc" }).ok).toBe(false));
+test("rejects empty delta", () =>
+  expect(
+    validateCase({
+      ...ok,
+      chunks: [
+        { delta: "", t: 0 },
+        { delta: "ab", t: 1 },
+      ],
+    }).ok,
+  ).toBe(false));
+test("rejects decreasing t", () =>
+  expect(
+    validateCase({
+      ...ok,
+      chunks: [
+        { delta: "a", t: 5 },
+        { delta: "b", t: 1 },
+      ],
+    }).ok,
+  ).toBe(false));
+test("rejects non-integer or negative t", () =>
+  expect(
+    validateCase({
+      ...ok,
+      chunks: [
+        { delta: "a", t: -1 },
+        { delta: "b", t: 1.5 },
+      ],
+    }).ok,
+  ).toBe(false));
 test("rejects bad id", () => expect(validateCase({ ...ok, id: "Bad_Id" }).ok).toBe(false));
-test("rejects unknown source", () => expect(validateCase({ ...ok, source: "gemini" }).ok).toBe(false));
-test("loadCases names the bad file", async () => { /* tmp dir with one bad file "x.json" */ await expect(loadCases(tmp)).rejects.toThrow(/x\.json/); });
+test("rejects unknown source", () =>
+  expect(validateCase({ ...ok, source: "gemini" }).ok).toBe(false));
+test("loadCases names the bad file", async () => {
+  /* tmp dir with one bad file "x.json" */ await expect(loadCases(tmp)).rejects.toThrow(/x\.json/);
+});
 ```
 
 - [ ] **Step 2b: Run** `pnpm vitest run corpus/schema.test.ts`. Expected: FAIL (module not found).
@@ -159,15 +202,63 @@ Rules: `token` returns a copy of `c.chunks`. `random` cuts into pieces whose len
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-const c = { id: "x", source: "synthetic", tags: [], text: "a **b** [c](d)", chunks: [{ delta: "a **b", t: 0 }, { delta: "** [c](d)", t: 100 }] } as StreamCase;
-test("all policies join back to text", () => { for (const p of ["token","random","adversarial"] as const) expect(rechunk(c, p).map(x => x.delta).join("")).toBe(c.text); });
-test("adversarial exact split", () => expect(rechunk(c, "adversarial").map(x => x.delta)).toEqual(["a ","*","*","b","*","*"," ","[","c","]","(","d",")"]));
-test("adversarial t mapping", () => expect(rechunk(c, "adversarial").map(x => x.t)).toEqual([0,0,0,0,100,100,100,100,100,100,100,100,100]));
-test("random is deterministic per seed", () => expect(rechunk(c, "random", 7)).toEqual(rechunk(c, "random", 7)));
-test("random differs across seeds", () => expect(rechunk(long, "random", 1)).not.toEqual(rechunk(long, "random", 2)));
-test("random piece length within 1..12 code points", () => { for (const ch of rechunk(long, "random")) expect([...ch.delta].length).toBeGreaterThanOrEqual(1), expect([...ch.delta].length).toBeLessThanOrEqual(12); });
-test("never splits surrogate pairs", () => { const e = mk("👍👍 **🎉**"); for (const p of ["random","adversarial"] as const) for (const ch of rechunk(e, p)) expect(ch.delta).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/); });
-test("t is non-decreasing", () => { const t = rechunk(long, "random").map(x => x.t); expect(t).toEqual([...t].sort((a,b)=>a-b)); });
+const c = {
+  id: "x",
+  source: "synthetic",
+  tags: [],
+  text: "a **b** [c](d)",
+  chunks: [
+    { delta: "a **b", t: 0 },
+    { delta: "** [c](d)", t: 100 },
+  ],
+} as StreamCase;
+test("all policies join back to text", () => {
+  for (const p of ["token", "random", "adversarial"] as const)
+    expect(
+      rechunk(c, p)
+        .map((x) => x.delta)
+        .join(""),
+    ).toBe(c.text);
+});
+test("adversarial exact split", () =>
+  expect(rechunk(c, "adversarial").map((x) => x.delta)).toEqual([
+    "a ",
+    "*",
+    "*",
+    "b",
+    "*",
+    "*",
+    " ",
+    "[",
+    "c",
+    "]",
+    "(",
+    "d",
+    ")",
+  ]));
+test("adversarial t mapping", () =>
+  expect(rechunk(c, "adversarial").map((x) => x.t)).toEqual([
+    0, 0, 0, 0, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+  ]));
+test("random is deterministic per seed", () =>
+  expect(rechunk(c, "random", 7)).toEqual(rechunk(c, "random", 7)));
+test("random differs across seeds", () =>
+  expect(rechunk(long, "random", 1)).not.toEqual(rechunk(long, "random", 2)));
+test("random piece length within 1..12 code points", () => {
+  for (const ch of rechunk(long, "random"))
+    expect([...ch.delta].length).toBeGreaterThanOrEqual(1),
+      expect([...ch.delta].length).toBeLessThanOrEqual(12);
+});
+test("never splits surrogate pairs", () => {
+  const e = mk("👍👍 **🎉**");
+  for (const p of ["random", "adversarial"] as const)
+    for (const ch of rechunk(e, p))
+      expect(ch.delta).not.toMatch(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/);
+});
+test("t is non-decreasing", () => {
+  const t = rechunk(long, "random").map((x) => x.t);
+  expect(t).toEqual([...t].sort((a, b) => a - b));
+});
 ```
 (`long` = a ~2 KB fixture case; `mk(text)` = a one-chunk case helper defined in the test.)
 
@@ -197,11 +288,24 @@ test("t is non-decreasing", () => { const t = rechunk(long, "random").map(x => x
 - [ ] **Step 2: Write failing tests**
 
 ```ts
-test("every def produces a valid case", () => { for (const d of DEFS) expect(validateCase(defToCase(d)).ok).toBe(true); });
-test("cuts become chunk boundaries", () => expect(defToCase({ id: "synth-x", tags: [], text: "abcd", cuts: [1, 3] }).chunks).toEqual([{ delta: "a", t: 0 }, { delta: "bc", t: 30 }, { delta: "d", t: 60 }]));
-test("ids are unique", () => expect(new Set(DEFS.map(d => d.id)).size).toBe(DEFS.length));
-test("generation is byte-identical on re-run", async () => { await generateSynthetic(tmp); const a = await readAll(tmp); await generateSynthetic(tmp); expect(await readAll(tmp)).toEqual(a); });
+test("every def produces a valid case", () => {
+  for (const d of DEFS) expect(validateCase(defToCase(d)).ok).toBe(true);
+});
+test("cuts become chunk boundaries", () =>
+  expect(defToCase({ id: "synth-x", tags: [], text: "abcd", cuts: [1, 3] }).chunks).toEqual([
+    { delta: "a", t: 0 },
+    { delta: "bc", t: 30 },
+    { delta: "d", t: 60 },
+  ]));
+test("ids are unique", () => expect(new Set(DEFS.map((d) => d.id)).size).toBe(DEFS.length));
+test("generation is byte-identical on re-run", async () => {
+  await generateSynthetic(tmp);
+  const a = await readAll(tmp);
+  await generateSynthetic(tmp);
+  expect(await readAll(tmp)).toEqual(a);
+});
 ```
+
 - [ ] **Step 3: Run** `pnpm vitest run corpus/synthetic`. Expected: FAIL. **Implement**, then run again. Expected: PASS.
 - [ ] **Step 4: Run** `pnpm corpus:synthetic`. Expected: ≥14 files in `corpus/cases/`.
 - [ ] **Step 5: Commit** `feat(corpus): synthetic edge-case generator and cases`
@@ -225,18 +329,38 @@ test("generation is byte-identical on re-run", async () => { await generateSynth
 
 ```ts
 // flips.test.ts
-test("appending blocks is not a flip", () => expect(detectFlips([["p"],["p","pre"],["p","pre","ul"]],[0,1,2]).flips).toBe(0));
-test("p → h2 is one flip with event", () => expect(detectFlips([["p"],["h2"]],[3,4])).toEqual({ flips: 1, events: [{ chunk: 4, index: 0, from: "p", to: "h2" }] }));
-test("split of last p into p,p is not a flip", () => expect(detectFlips([["p"],["p","p"]],[0,1]).flips).toBe(0));
-test("disappearing block flips to ∅", () => expect(detectFlips([["p","hr"],["p"]],[0,1]).events[0]).toEqual({ chunk: 1, index: 1, from: "hr", to: "∅" }));
-test("counts every transition", () => expect(detectFlips([["p"],["ul"],["p"]],[0,1,2]).flips).toBe(2));
-test("empty input", () => expect(detectFlips([],[]).flips).toBe(0));
+test("appending blocks is not a flip", () =>
+  expect(detectFlips([["p"], ["p", "pre"], ["p", "pre", "ul"]], [0, 1, 2]).flips).toBe(0));
+test("p → h2 is one flip with event", () =>
+  expect(detectFlips([["p"], ["h2"]], [3, 4])).toEqual({
+    flips: 1,
+    events: [{ chunk: 4, index: 0, from: "p", to: "h2" }],
+  }));
+test("split of last p into p,p is not a flip", () =>
+  expect(detectFlips([["p"], ["p", "p"]], [0, 1]).flips).toBe(0));
+test("disappearing block flips to ∅", () =>
+  expect(detectFlips([["p", "hr"], ["p"]], [0, 1]).events[0]).toEqual({
+    chunk: 1,
+    index: 1,
+    from: "hr",
+    to: "∅",
+  }));
+test("counts every transition", () =>
+  expect(detectFlips([["p"], ["ul"], ["p"]], [0, 1, 2]).flips).toBe(2));
+test("empty input", () => expect(detectFlips([], []).flips).toBe(0));
 // blocks.test.ts
-test("unwraps wrappers", () => expect(blockTypes(html(`<div><div><pre><code>x</code></pre></div></div><p>a</p>`))).toEqual(["pre","p"]));
-test("table inside wrapper", () => expect(blockTypes(html(`<div class="w"><table></table></div>`))).toEqual(["table"]));
-test("ignoreSelectors drop nodes", () => expect(blockTypes(html(`<button>Copy</button><p>a</p>`), ["button"])).toEqual(["p"]));
+test("unwraps wrappers", () =>
+  expect(blockTypes(html(`<div><div><pre><code>x</code></pre></div></div><p>a</p>`))).toEqual([
+    "pre",
+    "p",
+  ]));
+test("table inside wrapper", () =>
+  expect(blockTypes(html(`<div class="w"><table></table></div>`))).toEqual(["table"]));
+test("ignoreSelectors drop nodes", () =>
+  expect(blockTypes(html(`<button>Copy</button><p>a</p>`), ["button"])).toEqual(["p"]));
 test("unknown → other", () => expect(blockTypes(html(`<span>x</span>`))).toEqual(["other"]));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run runner/metrics/flips runner/metrics/blocks`. Expected: FAIL. **Implement**, run again. Expected: PASS.
 - [ ] **Step 3: Commit** `feat(metrics): block types and flip detector`
 
@@ -266,16 +390,36 @@ Normalization rules (in order, on a `hast-util-from-html` fragment):
 
 ```ts
 test("heading", () => expect(normalizeHtml(renderReference("# A"))).toBe("<h1>A</h1>"));
-test("unwraps div/span, drops class", () => expect(normalizeHtml(`<div class="x"><p><span>a</span> b</p></div>`)).toBe("<p>a b</p>"));
-test("drops buttons and aria-hidden", () => expect(normalizeHtml(`<div><button>Copy</button><pre><code class="language-js">x</code></pre><i aria-hidden="true">!</i></div>`)).toBe("<pre><code>x</code></pre>"));
-test("style text-align → align", () => expect(normalizeHtml(`<table><tr><td style="text-align: center">a</td></tr></table>`)).toBe(normalizeHtml(`<table><tr><td align="center">a</td></tr></table>`)));
-test("pre: trailing newline ignored", () => expect(normalizeHtml("<pre><code>a\n</code></pre>")).toBe(normalizeHtml("<pre><code>a</code></pre>")));
-test("pre: indentation preserved", () => expect(normalizeHtml("<pre><code>  a</code></pre>")).not.toBe(normalizeHtml("<pre><code>a</code></pre>")));
-test("one block per line", () => expect(normalizeHtml(renderReference("a\n\nb"))).toBe("<p>a</p>\n<p>b</p>"));
-test("gfm table renders", () => expect(normalizeHtml(renderReference("|a|\n|-|\n|1|"))).toContain("<table>"));
-test("visibleText strips syntax", () => expect(visibleText(renderReference("**b** [c](d)"))).toBe("b c"));
-test("htmlDiff is capped", () => expect(htmlDiff("a".repeat(9000), "b").length).toBeLessThanOrEqual(4096));
+test("unwraps div/span, drops class", () =>
+  expect(normalizeHtml(`<div class="x"><p><span>a</span> b</p></div>`)).toBe("<p>a b</p>"));
+test("drops buttons and aria-hidden", () =>
+  expect(
+    normalizeHtml(
+      `<div><button>Copy</button><pre><code class="language-js">x</code></pre><i aria-hidden="true">!</i></div>`,
+    ),
+  ).toBe("<pre><code>x</code></pre>"));
+test("style text-align → align", () =>
+  expect(normalizeHtml(`<table><tr><td style="text-align: center">a</td></tr></table>`)).toBe(
+    normalizeHtml(`<table><tr><td align="center">a</td></tr></table>`),
+  ));
+test("pre: trailing newline ignored", () =>
+  expect(normalizeHtml("<pre><code>a\n</code></pre>")).toBe(
+    normalizeHtml("<pre><code>a</code></pre>"),
+  ));
+test("pre: indentation preserved", () =>
+  expect(normalizeHtml("<pre><code>  a</code></pre>")).not.toBe(
+    normalizeHtml("<pre><code>a</code></pre>"),
+  ));
+test("one block per line", () =>
+  expect(normalizeHtml(renderReference("a\n\nb"))).toBe("<p>a</p>\n<p>b</p>"));
+test("gfm table renders", () =>
+  expect(normalizeHtml(renderReference("|a|\n|-|\n|1|"))).toContain("<table>"));
+test("visibleText strips syntax", () =>
+  expect(visibleText(renderReference("**b** [c](d)"))).toBe("b c"));
+test("htmlDiff is capped", () =>
+  expect(htmlDiff("a".repeat(9000), "b").length).toBeLessThanOrEqual(4096));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run runner/metrics/reference`. Expected: FAIL. **Implement**, run again. Expected: PASS.
 - [ ] **Step 3: Commit** `feat(metrics): reference renderer and HTML normalization`
 
@@ -298,10 +442,17 @@ test("htmlDiff is capped", () => expect(htmlDiff("a".repeat(9000), "b").length).
 ```ts
 test("finds bold opener", () => expect(findLeakTokens("hello **wor")).toEqual(["**"]));
 test("finds link mid-url", () => expect(findLeakTokens("[a](ht")).toEqual(["]("]));
-test("counts snapshots, not tokens", () => expect(countLeaks([["**","]("],[],["**"]],[0,1,2],"plain")).toEqual({ snapshots: 2, firstChunk: 0 }));
-test("tokens present in reference are not leaks", () => expect(countLeaks([["**","__"]],[5],"def f(**kwargs): __init__").snapshots).toBe(0));
-test("no leaks → null firstChunk", () => expect(countLeaks([[],[]],[0,1],"x")).toEqual({ snapshots: 0, firstChunk: null }));
+test("counts snapshots, not tokens", () =>
+  expect(countLeaks([["**", "]("], [], ["**"]], [0, 1, 2], "plain")).toEqual({
+    snapshots: 2,
+    firstChunk: 0,
+  }));
+test("tokens present in reference are not leaks", () =>
+  expect(countLeaks([["**", "__"]], [5], "def f(**kwargs): __init__").snapshots).toBe(0));
+test("no leaks → null firstChunk", () =>
+  expect(countLeaks([[], []], [0, 1], "x")).toEqual({ snapshots: 0, firstChunk: null }));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run runner/metrics/leaks`. Expected: FAIL. **Implement**, run again. Expected: PASS.
 - [ ] **Step 3: Commit** `feat(metrics): raw syntax leak detector`
 
@@ -323,14 +474,34 @@ test("no leaks → null firstChunk", () => expect(countLeaks([[],[]],[0,1],"x"))
 
 ```ts
 const y = `- heading "Title" [level=2]\n- paragraph: hello wor\n- list:\n  - listitem: a`;
-test("parses roles, names, paths", () => expect(parseAriaSnapshot(y)).toEqual([
-  { path: "0", role: "heading", name: "Title" }, { path: "1", role: "paragraph", name: "hello wor" },
-  { path: "2", role: "list", name: "" }, { path: "2/0", role: "listitem", name: "a" }]));
-test("text growth is not churn", () => expect(diffA11y(parseAriaSnapshot("- paragraph: hel"), parseAriaSnapshot("- paragraph: hello"))).toBe(0));
-test("role change is churn", () => expect(diffA11y(parseAriaSnapshot("- paragraph: Title"), parseAriaSnapshot(`- heading "Title" [level=2]`))).toBe(1));
-test("rename is churn", () => expect(diffA11y(parseAriaSnapshot("- paragraph: **b"), parseAriaSnapshot("- paragraph: b"))).toBe(1));
-test("removed node is churn", () => expect(diffA11y(parseAriaSnapshot("- paragraph: a\n- separator"), parseAriaSnapshot("- paragraph: a"))).toBe(1));
+test("parses roles, names, paths", () =>
+  expect(parseAriaSnapshot(y)).toEqual([
+    { path: "0", role: "heading", name: "Title" },
+    { path: "1", role: "paragraph", name: "hello wor" },
+    { path: "2", role: "list", name: "" },
+    { path: "2/0", role: "listitem", name: "a" },
+  ]));
+test("text growth is not churn", () =>
+  expect(
+    diffA11y(parseAriaSnapshot("- paragraph: hel"), parseAriaSnapshot("- paragraph: hello")),
+  ).toBe(0));
+test("role change is churn", () =>
+  expect(
+    diffA11y(
+      parseAriaSnapshot("- paragraph: Title"),
+      parseAriaSnapshot(`- heading "Title" [level=2]`),
+    ),
+  ).toBe(1));
+test("rename is churn", () =>
+  expect(diffA11y(parseAriaSnapshot("- paragraph: **b"), parseAriaSnapshot("- paragraph: b"))).toBe(
+    1,
+  ));
+test("removed node is churn", () =>
+  expect(
+    diffA11y(parseAriaSnapshot("- paragraph: a\n- separator"), parseAriaSnapshot("- paragraph: a")),
+  ).toBe(1));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run runner/metrics/a11y`. Expected: FAIL. **Implement**, run again. Expected: PASS.
 - [ ] **Step 3: Commit** `feat(metrics): accessibility tree churn`
 
@@ -352,6 +523,7 @@ Adapter library deps go in the **root** `package.json`: Vite resolves bare impor
   - `adapters/types.ts`: the spec's `RendererAdapter` plus optional `ignoreSelectors?: string[]`. Global `declare const __VERSIONS__: Record<string, string>`.
   - `harness/src/registry.ts`: `export const registry: Record<string, () => Promise<{ default: RendererAdapter }>>`, keys `react-markdown-baseline`, `__broken`, `__hang` (more keys in Tasks 9–10).
   - `harness/src/bench-api.ts`:
+
     ```ts
     type ChunkProbe = { blocks: string[]; leakTokens: LeakToken[] };
     type FinalProbe = { html: string; cls: number; liveRegionUpdates: number };
@@ -366,6 +538,7 @@ Adapter library deps go in the **root** `package.json`: Vite resolves bare impor
       unmount(): void;
     }
     ```
+
     The page reads `?adapter=<name>`, mounts into `<div id="root">`, and exposes `window.__bench`.
   - `settle(): Promise<void>` = two `requestAnimationFrame`s, then `setTimeout(0)`.
   - `serveDir(dir: string): Promise<{ url: string; close(): Promise<void> }>` (`node:http`, random port, `index.html` fallback for `/`, 404 otherwise).
@@ -385,17 +558,28 @@ In-page probe details:
 
 - [ ] **Step 1: Write the failing contract test** `tests/browser/contract.test.ts`
 
-```ts
-const FIXTURES = { paragraph: "Hello *world*\n", list: "- a\n- b\n", code: "```js\nconst a = 1;\n```\n" };
-for (const name of Object.keys(registry).filter(n => !n.startsWith("__")))
+````ts
+const FIXTURES = {
+  paragraph: "Hello *world*\n",
+  list: "- a\n- b\n",
+  code: "```js\nconst a = 1;\n```\n",
+};
+for (const name of Object.keys(registry).filter((n) => !n.startsWith("__")))
   for (const [fx, md] of Object.entries(FIXTURES))
     test(`${name} renders ${fx}`, async () => {
       const page = await openHarness(name);
-      const final = await page.evaluate(async md => { __bench.mount(); await __bench.pushAndSettle(md); return __bench.endAndSettle(); }, md);
+      const final = await page.evaluate(async (md) => {
+        __bench.mount();
+        await __bench.pushAndSettle(md);
+        return __bench.endAndSettle();
+      }, md);
       expect(normalizeHtml(final.html)).toBe(normalizeHtml(renderReference(md)));
     });
-test("ready reports a real version", async () => expect((await (await openHarness("react-markdown-baseline")).evaluate(() => __bench.ready)).version).toMatch(/^\d+\.\d+\.\d+/));
-```
+test("ready reports a real version", async () =>
+  expect(
+    (await (await openHarness("react-markdown-baseline")).evaluate(() => __bench.ready)).version,
+  ).toMatch(/^\d+\.\d+\.\d+/));
+````
 Vitest project `browser`: include `tests/browser/**/*.test.ts`, globalSetup `tests/browser/global-setup.ts` (runs `pnpm build:harness`, starts `serveDir("harness/dist")`, provides the URL via `project.provide`), `testTimeout: 60_000`, `fileParallelism: false`.
 
 - [ ] **Step 2: Run** `pnpm vitest run --project browser`. Expected: FAIL.
@@ -454,6 +638,7 @@ React root re-rendering `<Streamdown>{accumulatedText}</Streamdown>` with defaul
 **Interfaces:**
 - Consumes: `rechunk`, `ChunkPolicy` (2); `detectFlips`, `FlipEvent` (4); `renderReference`, `normalizeHtml`, `visibleText`, `htmlDiff` (5); `countLeaks` (6); `parseAriaSnapshot`, `diffA11y` (7); `BenchApi`, `openHarness` (8)
 - Produces (`runner/types.ts`):
+
   ```ts
   type FidelityResult = { chunks: number; stride: number; flips: number; flipEvents: FlipEvent[]; cls: number;
     leakSnapshots: number; firstLeakChunk: number | null; liveRegionUpdates: number; a11yChurn: number;
@@ -465,6 +650,7 @@ React root re-rendering `<Streamdown>{accumulatedText}</Streamdown>` with defaul
     policy: ChunkPolicy; seed: number; env: Env; status: "ok" | "error" | "timeout"; error?: string;
     fidelity?: FidelityResult; perf?: { realtime: PerfStats; flood: PerfStats } };
   ```
+
   - `MAX_SNAPSHOTS = 1500`; `fidelityTimeoutMs(snapshots: number) = 60_000 + 100 * snapshots`
   - `runGuarded<T>(page: Page, timeoutMs: number, fn: () => Promise<T>): Promise<{ status: "ok"; value: T } | { status: "error" | "timeout"; error: string }>`: races `fn` against the timeout and the page's `pageerror`; on timeout it closes the page.
   - `runFidelity(page: Page, c: StreamCase, chunks: Chunk[]): Promise<FidelityResult>`: mount; for each chunk call `pushAndSettle` when `i % stride === stride - 1 || i === last`, otherwise `push`; at each snapshot read `#root` `ariaSnapshot()`; then `endAndSettle`; compute every field (`flipEvents` capped at 50); `finalDiff` only when no match.
@@ -473,28 +659,55 @@ React root re-rendering `<Streamdown>{accumulatedText}</Streamdown>` with defaul
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-const setext: StreamCase = { id: "t-setext", source: "synthetic", tags: [], text: "Title\n--\n", chunks: [{ delta: "Title\n", t: 0 }, { delta: "-", t: 30 }, { delta: "-\n", t: 60 }] };
+const setext: StreamCase = {
+  id: "t-setext",
+  source: "synthetic",
+  tags: [],
+  text: "Title\n--\n",
+  chunks: [
+    { delta: "Title\n", t: 0 },
+    { delta: "-", t: 30 },
+    { delta: "-\n", t: 60 },
+  ],
+};
 test("baseline flips p → h2 on setext", async () => {
   const r = await runFidelity(await openHarness("react-markdown-baseline"), setext, setext.chunks);
-  expect(r.flips).toBeGreaterThanOrEqual(1); expect(r.flipEvents[0]).toMatchObject({ from: "p", to: "h2" }); expect(r.finalMatch).toBe(true);
+  expect(r.flips).toBeGreaterThanOrEqual(1);
+  expect(r.flipEvents[0]).toMatchObject({ from: "p", to: "h2" });
+  expect(r.finalMatch).toBe(true);
 });
 test("leak counted on half-open bold", async () => {
   const c = caseFrom(["hello **wor", "ld**"]);
-  expect((await runFidelity(await openHarness("marked-reparse"), c, c.chunks)).leakSnapshots).toBe(1);
+  expect((await runFidelity(await openHarness("marked-reparse"), c, c.chunks)).leakSnapshots).toBe(
+    1,
+  );
 });
 test("replay is deterministic", async () => {
-  const c = await loadSynth("synth-table-row"); const ch = rechunk(c, "random");
-  const a = await runFidelity(await openHarness("streaming-markdown"), c, ch), b = await runFidelity(await openHarness("streaming-markdown"), c, ch);
+  const c = await loadSynth("synth-table-row");
+  const ch = rechunk(c, "random");
+  const a = await runFidelity(await openHarness("streaming-markdown"), c, ch),
+    b = await runFidelity(await openHarness("streaming-markdown"), c, ch);
   expect(a).toEqual(b);
 });
-test("stride caps snapshots", async () => { /* 4000 one-char chunks */ expect((await runFidelity(page, big, big.chunks)).stride).toBe(3); });
+test("stride caps snapshots", async () => {
+  /* 4000 one-char chunks */ expect((await runFidelity(page, big, big.chunks)).stride).toBe(3);
+});
 test("throwing adapter → error, message kept", async () => {
   const page = await openHarness("__broken");
   const g = await runGuarded(page, 5_000, () => runFidelity(page, setext, setext.chunks));
-  expect(g.status).toBe("error"); expect(g.error).toMatch(/./);
+  expect(g.status).toBe("error");
+  expect(g.error).toMatch(/./);
 });
-test("hanging adapter → timeout", async () => { const hangPage = await openHarness("__hang"); expect((await runGuarded(hangPage, 2_000, () => runFidelity(hangPage, setext, setext.chunks))).status).toBe("timeout"); });
-test("writeResult path layout", async () => expect(await writeResult(tmp, sample)).toMatch(/2026-10-24[\\/]react-markdown-baseline[\\/]t-setext\.token\.json$/));
+test("hanging adapter → timeout", async () => {
+  const hangPage = await openHarness("__hang");
+  expect(
+    (await runGuarded(hangPage, 2_000, () => runFidelity(hangPage, setext, setext.chunks))).status,
+  ).toBe("timeout");
+});
+test("writeResult path layout", async () =>
+  expect(await writeResult(tmp, sample)).toMatch(
+    /2026-10-24[\\/]react-markdown-baseline[\\/]t-setext\.token\.json$/,
+  ));
 ```
 (`caseFrom(deltas)` builds a valid case with `t = 30·i`.)
 
@@ -535,12 +748,42 @@ test("writeResult path layout", async () => expect(await writeResult(tmp, sample
 - [ ] **Step 1: Write failing unit tests**
 
 ```ts
-test("percentile nearest-rank", () => { expect(percentile([1,2,3,4,5], 50)).toBe(3); expect(percentile([1,2,3,4,5], 95)).toBe(5); expect(percentile([7], 95)).toBe(7); });
-test("matrix skips rechunk for long cases", () => expect(buildMatrix([longCase], ["a"], ["token","random","adversarial"], true).map(e => e.policy)).toEqual(["token"]));
-test("matrix: perf only on token, no __ adapters", () => { const m = buildMatrix([shortCase], ["a","__hang"], ["token","random"], true); expect(m).toEqual([{ adapter:"a", caseId:shortCase.id, policy:"token", perf:true }, { adapter:"a", caseId:shortCase.id, policy:"random", perf:false }]); });
-test("aggregate keys by name@version and ignores errored metrics", () => { const s = aggregate([ok("x","1.0.0",{flips:2}), err("x","1.0.0"), ok("x","2.0.0",{flips:0})]); expect(s.adapters.map(a=>a.key)).toEqual(["x@1.0.0","x@2.0.0"]); expect(s.adapters[0]).toMatchObject({ runs: 2, errors: 1, stability: { flipsTotal: 2, casesWithFlips: 1 } }); });
-test("finalMatchRate", () => expect(aggregate([ok("x","1",{finalMatch:true}), ok("x","1",{finalMatch:false})]).adapters[0].correctness.finalMatchRate).toBe(0.5));
+test("percentile nearest-rank", () => {
+  expect(percentile([1, 2, 3, 4, 5], 50)).toBe(3);
+  expect(percentile([1, 2, 3, 4, 5], 95)).toBe(5);
+  expect(percentile([7], 95)).toBe(7);
+});
+test("matrix skips rechunk for long cases", () =>
+  expect(
+    buildMatrix([longCase], ["a"], ["token", "random", "adversarial"], true).map((e) => e.policy),
+  ).toEqual(["token"]));
+test("matrix: perf only on token, no __ adapters", () => {
+  const m = buildMatrix([shortCase], ["a", "__hang"], ["token", "random"], true);
+  expect(m).toEqual([
+    { adapter: "a", caseId: shortCase.id, policy: "token", perf: true },
+    { adapter: "a", caseId: shortCase.id, policy: "random", perf: false },
+  ]);
+});
+test("aggregate keys by name@version and ignores errored metrics", () => {
+  const s = aggregate([
+    ok("x", "1.0.0", { flips: 2 }),
+    err("x", "1.0.0"),
+    ok("x", "2.0.0", { flips: 0 }),
+  ]);
+  expect(s.adapters.map((a) => a.key)).toEqual(["x@1.0.0", "x@2.0.0"]);
+  expect(s.adapters[0]).toMatchObject({
+    runs: 2,
+    errors: 1,
+    stability: { flipsTotal: 2, casesWithFlips: 1 },
+  });
+});
+test("finalMatchRate", () =>
+  expect(
+    aggregate([ok("x", "1", { finalMatch: true }), ok("x", "1", { finalMatch: false })]).adapters[0]
+      .correctness.finalMatchRate,
+  ).toBe(0.5));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run --project unit`. Expected: FAIL. **Implement** stats, matrix and aggregate, then run again. Expected: PASS.
 - [ ] **Step 3: Write the failing CLI smoke test** `tests/browser/cli.test.ts`
 
@@ -548,11 +791,14 @@ test("finalMatchRate", () => expect(aggregate([ok("x","1",{finalMatch:true}), ok
 test("smoke run writes valid results and summary", async () => {
   expect(await main(["--smoke", "--out", tmp, "--date", "2026-10-24"])).toBe(0);
   const rs = await readResults(join(tmp, "2026-10-24"));
-  expect(rs.length).toBe(2 * 4);                   // 2 cases × 4 adapters, token only
-  expect(rs.every(r => r.status === "ok" && r.fidelity && r.perf?.realtime.runs.length === 1)).toBe(true);
+  expect(rs.length).toBe(2 * 4); // 2 cases × 4 adapters, token only
+  expect(
+    rs.every((r) => r.status === "ok" && r.fidelity && r.perf?.realtime.runs.length === 1),
+  ).toBe(true);
   expect(JSON.parse(await readFile(join(tmp, "summary.json"), "utf8")).adapters).toHaveLength(4);
 }, 300_000);
 ```
+
 - [ ] **Step 4: Implement** perf, env and cli. **Run** `pnpm vitest run tests/browser/cli.test.ts`. Expected: PASS.
 - [ ] **Step 5: Run** `pnpm bench --smoke`. Expected: progress lines, `results/<today>/…` and `results/summary.json` written, exit 0.
 - [ ] **Step 6: Commit** `feat(runner): perf pass, matrix, aggregation, bench CLI`
@@ -575,9 +821,26 @@ test("smoke run writes valid results and summary", async () => {
 - [ ] **Step 1: Write failing tests**
 
 ```ts
-test("relative t and CRLF normalization", () => expect(toCase([{ delta: "a\r\n", atMs: 1000 }, { delta: "", atMs: 1001 }, { delta: "b", atMs: 1040.6 }], meta)).toMatchObject({ text: "a\nb", chunks: [{ delta: "a\n", t: 0 }, { delta: "b", t: 41 }] }));
+test("relative t and CRLF normalization", () =>
+  expect(
+    toCase(
+      [
+        { delta: "a\r\n", atMs: 1000 },
+        { delta: "", atMs: 1001 },
+        { delta: "b", atMs: 1040.6 },
+      ],
+      meta,
+    ),
+  ).toMatchObject({
+    text: "a\nb",
+    chunks: [
+      { delta: "a\n", t: 0 },
+      { delta: "b", t: 41 },
+    ],
+  }));
 test("output validates", () => expect(validateCase(toCase(evts, meta)).ok).toBe(true));
 ```
+
 - [ ] **Step 2: Run** `pnpm vitest run recorder`. Expected: FAIL. **Implement** `toCase` and `record.ts`, then run again. Expected: PASS.
 - [ ] **Step 3: Write 18 prompts** (10 Claude, 8 GPT), freshly authored, with no employer content. Cover: wide tables (2), nested lists (2), multi-language code blocks (3), link-heavy answers (2), heading-structured docs (2), mixed everything (3), task lists + blockquotes (2), long answers of ~50k tokens (2, tag `long`).
 - [ ] **Step 4: Record** them (the user supplies API keys). Then run `pnpm vitest run --project unit` and check that `loadCases("corpus/cases")` returns ≥32 cases.
@@ -605,15 +868,15 @@ test("output validates", () => expect(validateCase(toCase(evts, meta)).ok).toBe(
 
 ## Spec coverage map
 
-| Spec item | Task |
-|---|---|
-| §4.1 schema, real + synthetic cases, 3 chunking policies | 1, 2, 3, 13 |
-| §4.2 adapter interface, separate bundles, ≥4 adapters incl. baseline | 8, 9, 10 |
-| §4.3 runner, realtime/flood, controlled clock | 8 (replay), 11, 12 |
+| Spec item                                                                 | Task                          |
+| ------------------------------------------------------------------------- | ----------------------------- |
+| §4.1 schema, real + synthetic cases, 3 chunking policies                  | 1, 2, 3, 13                   |
+| §4.2 adapter interface, separate bundles, ≥4 adapters incl. baseline      | 8, 9, 10                      |
+| §4.3 runner, realtime/flood, controlled clock                             | 8 (replay), 11, 12            |
 | §4.4 perf / CLS / flips / final match / leaks / live regions / a11y churn | 12 / 8+11 / 4 / 5 / 6 / 8 / 7 |
-| §4.4 manual NVDA/VoiceOver notes | Plan 2 |
-| §4.5 results per run + env + summary.json | 11, 12 |
-| §4.6 site, §3.4–3.6 article/upstream | Plan 2 |
-| §7 error/timeout, 5 runs, 4× throttle, determinism, version keying | 11, 12 |
-| §8 unit, contract, smoke, determinism tests | 1–7, 8, 12, 11 |
-| §3.7 one command + CI | 12, 14 (site build → Plan 2) |
+| §4.4 manual NVDA/VoiceOver notes                                          | Plan 2                        |
+| §4.5 results per run + env + summary.json                                 | 11, 12                        |
+| §4.6 site, §3.4–3.6 article/upstream                                      | Plan 2                        |
+| §7 error/timeout, 5 runs, 4× throttle, determinism, version keying        | 11, 12                        |
+| §8 unit, contract, smoke, determinism tests                               | 1–7, 8, 12, 11                |
+| §3.7 one command + CI                                                     | 12, 14 (site build → Plan 2)  |

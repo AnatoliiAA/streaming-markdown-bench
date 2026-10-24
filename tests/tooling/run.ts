@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dir, "../..");
 
@@ -16,4 +17,27 @@ export async function run(cmd: string[], opts: { cwd?: string } = {}): Promise<R
     proc.exited,
   ]);
   return { code, stdout, stderr };
+}
+
+/** Writes a temp file (creating parent dirs), runs fn, then always removes the file and any dirs it created. */
+export async function withFile(
+  relPath: string,
+  content: string,
+  fn: () => Promise<void>,
+): Promise<void> {
+  const full = resolve(repoRoot, relPath);
+  const created: string[] = [];
+  let dir = dirname(full);
+  while (!existsSync(dir)) {
+    created.push(dir);
+    dir = dirname(dir);
+  }
+  mkdirSync(dirname(full), { recursive: true });
+  writeFileSync(full, content);
+  try {
+    await fn();
+  } finally {
+    rmSync(full, { force: true });
+    for (const d of created) rmSync(d, { recursive: true, force: true });
+  }
 }

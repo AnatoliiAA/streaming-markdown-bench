@@ -1,5 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "composite": true, "emitDeclarationOnly": true, "declaration": true, "tsBuildInfoFile": "../../node_modules/.cache/tsc/bench.tsbuildinfo", "outDir": "../../node_modules/.cache/tsc/bench", "rootDir": "src" },
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "tsBuildInfoFile": "../../node_modules/.cache/tsc/bench.tsbuildinfo",
+    "outDir": "../../node_modules/.cache/tsc/bench",
+    "rootDir": "src"
+  },
   "include": ["src"]
 }

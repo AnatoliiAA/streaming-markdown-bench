@@ -2,12 +2,21 @@
   "name": "streaming-markdown-bench",
   "private": true,
   "packageManager": "bun@1.4.4",
-  "workspaces": ["packages/*", "apps/*"],
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
   "devDependencies": {
+    "@biomejs/biome": "2.6.3",
     "@happy-dom/global-registrator": "^21.0.4",
     "@smb/bench": "workspace:*",
     "@smb/ui": "workspace:*",
     "@types/bun": "^1.4.4",
-    "typescript": "^7.0.2"
+    "typescript": "7.0.2"
+  },
+  "scripts": {
+    "check": "biome ci . && tsc -b && bun test && bun run lint:arch",
+    "format": "biome check --write .",
+    "lint:arch": "echo \"no arch rules yet\""
   }
 }

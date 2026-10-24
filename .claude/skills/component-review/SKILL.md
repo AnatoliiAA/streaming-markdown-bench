@@ -22,6 +22,9 @@ not a component — check: PASS
 not a component — check: FAIL — <failing step>: caused-by-diff | pre-existing
 ```
 
+- When the diff hits the `test:browser` trigger paths (Axis 1), append `; test:browser: PASS | FAIL | not run (<reason>)` to the same line. Still one line, no evidence block.
+- `caused-by-diff`: the implementer fixes it and the gate is re-run on the fix (still no full review). `pre-existing`: does not block the change, but report it to the controller/author.
+
 ## Inputs
 
 - The diff: `git diff --staged` (base = `HEAD`), or a commit range `git diff <base>..<head>` (base = the range's first commit's parent, as given). The base worktree below is created at that base.

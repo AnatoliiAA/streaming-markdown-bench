@@ -52,5 +52,6 @@ bun/gh may be missing from PATH in agent shells: `export PATH="$HOME/.bun/bin:/c
 
 - One branch per stage (or component group); one PR per branch.
 - Never push to `main`; the author merges. Agents never merge.
+- One commit per reviewed component.
 - Commits are conventional (`feat:`, `fix:`, `docs:`, `chore:`, `test:`) and end with a `Co-Authored-By:` trailer.
 - Visual-regression baselines are generated on Linux (CI/Docker), never on the Windows dev machine.

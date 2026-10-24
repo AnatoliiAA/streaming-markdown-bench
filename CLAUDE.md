@@ -37,7 +37,7 @@ Small changes skip step 5 but still do TDD and `bun run check`.
 | --- | --- |
 | Creating, moving or importing code anywhere | `project-architecture` |
 | Reviewing a finished component (step 5) | `component-review` |
-| Building a `packages/ui` component | `ds-component` (being added in Stage 0) |
+| Building a `packages/ui` component | `ds-component` |
 | Any feature or bugfix | `superpowers:test-driven-development` |
 
 ## Browser tests

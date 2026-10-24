@@ -170,6 +170,8 @@ Root scripts:
 
 **Bun + Playwright risk:** Stage 0 runs a smoke Playwright test under Bun first. If it is unreliable, browser tests run through `bunx --bun=false playwright test` (Node), and everything else stays on Bun. The outcome is recorded in `CLAUDE.md`.
 
+**Line endings:** `.gitattributes` with `* text=auto eol=lf` (the dev machine has `core.autocrlf=true`); Biome is configured for LF.
+
 **Windows note:** the author develops on Windows. VR baselines are generated in CI (Linux) or in the Playwright Docker image, never on the dev machine, to avoid font-rendering diffs.
 
 ## 6. Changes to the bench spec

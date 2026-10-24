@@ -15,15 +15,15 @@ Decide first, from the diff. When unsure whether it is a component, treat it as 
 | --- | --- |
 | DS component (`Slider`), bench detector, adapter, runner pass, FSD slice (`features/replay-speed`) | Config tweak, copy change, a prop added to an existing component, one-line script |
 
-Not a component: run `bun run check` (plus `bun run test:browser` per Axis 1), reply with exactly one line and stop. No nits, no follow-ups, no suggestions. On FAIL, classify the failure with the base procedure below.
+Not a component: run `bun run check` (plus `bun run test:browser` per Axis 1), reply with exactly one line and stop. No nits, no follow-ups, no suggestions. On a failing step (`check` or `test:browser`), classify the failure with the base procedure below.
 
 ```
 not a component — check: PASS
 not a component — check: FAIL — <failing step>: caused-by-diff | pre-existing
 ```
 
-- When the diff hits the `test:browser` trigger paths (Axis 1), append `; test:browser: PASS | FAIL | not run (<reason>)` to the same line. Still one line, no evidence block.
-- `caused-by-diff`: the implementer fixes it and the gate is re-run on the fix (still no full review). `pre-existing`: does not block the change, but report it to the controller/author.
+- When the diff hits the `test:browser` trigger paths (Axis 1), append `; test:browser: PASS | FAIL (caused-by-diff | pre-existing) | not run (<reason>)` to the same line. Still one line, no evidence block.
+- A `test:browser` FAIL is classified like a check failure. `caused-by-diff`: the implementer fixes it and the gate is re-run on the fix (still no full review). `pre-existing`: does not block the change, but report it to the controller/author.
 
 ## Inputs
 
@@ -34,7 +34,7 @@ not a component — check: FAIL — <failing step>: caused-by-diff | pre-existin
 
 | Check | How |
 | --- | --- |
-| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun test && bun run lint:arch`). Run `bun run test:browser` (not part of check) when the diff touches `packages/ui/**`, `apps/site/**`, `tests/browser/**` or `playwright.config.ts`. If it cannot run (no browser installed), say so in `evidence:`; never skip silently. |
+| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun test && bun run lint:arch`). Run `bun run test:browser` (not part of check) when the diff touches `packages/ui/**`, `apps/site/**`, `tests/browser/**` or `playwright.config.ts`. If it cannot run (no browser installed), say so (full review: in `evidence:`; non-component: `not run (<reason>)` in the one-line suffix); never skip silently. |
 | Public API | `git diff` on every `index.ts`: for each renamed/removed/changed export, grep all consumers; a stale consumer is a break (`tsc` shows it) |
 | Outside behavior | Files changed outside the component are justified by the task |
 

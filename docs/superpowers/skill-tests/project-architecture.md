@@ -8,7 +8,6 @@
 
 ## Baseline (RED)
 
-
 Scenarios (as in the plan):
 (a) In packages/bench/src/runner, use detectFlips from metrics.
 (b) Add a "copy results link" button to the site leaderboard.
@@ -25,6 +24,10 @@ Results:
 Controller ruling for the skill: inside apps/site, imports between FSD layers/slices use RELATIVE paths to the slice's index (e.g. `../../../shared/ui`) — no path alias in Stage 0 (an `@/` alias may be introduced in Stage 3 together with Vite config; the skill must say so). Inside a bench module, sibling files import each other relatively; other modules only via `../<module>` (its index.ts).
 GREEN must check: (a) logic NOT in index.ts; (b) relative import to shared/ui index, no bare "shared/ui"; (c) unchanged.
 
-## With skill (GREEN)
+## With skill (GREEN) — model: sonnet, 1 fresh subagent per scenario, read-only, told to read .claude/skills/project-architecture/SKILL.md + CLAUDE.md
 
-pending
+(a) PASS — metrics/flips.ts (+ colocated flips.test.ts), metrics/index.ts re-export only; runner logic in NEW runner/count-flips.ts (not index.ts), runner/index.ts re-exports it; import `import { detectFlips } from "../metrics"`, explicitly rejects `../metrics/flips`. Baseline deviation closed.
+(b) PASS — features/copy-results-link/{ui/CopyResultsLink.tsx, ui/CopyResultsLink.test.tsx, index.ts (re-export only)}, consumed by widgets/leaderboard via `../../../features/copy-results-link`; Button via `import { Button } from "../../../shared/ui"` (relative, slice index; never @smb/ui directly); new DS Button would go through ds-component. Baseline deviation (bare "shared/ui") closed.
+(c) PASS — `import type { Summary } from "@smb/bench"`; runner/types.ts → runner/index.ts (re-export only) → src/index.ts. Unchanged from baseline (already correct).
+
+Loopholes found: none.

@@ -6,7 +6,7 @@ Portfolio repo: a benchmark of streaming-markdown renderers (`packages/bench`), 
 
 | Command | What it does |
 | --- | --- |
-| `bun run check` | `biome ci . && tsc -b && bun test && bun run lint:arch`. Must exit 0 before every commit. `bun test` takes ~40-60s (tooling tests clone the repo and run the boundary matrix). |
+| `bun run check` | `biome ci . && tsc -b && bun test && bun run lint:arch`. Must exit 0 before every commit. `bun test` is currently slow (tooling tests clone the repo and run the boundary matrix). |
 | `bun run format` | `biome check --write .` |
 | `bun run lint:arch` | Boundary check: dependency-cruiser + steiger (see skill `project-architecture`) |
 | `bun run test:browser` | Playwright (`tests/browser/*.pw.ts`). Not part of `check` (needs a browser); run `bunx playwright install chromium` once per machine. CI runs both. |
@@ -15,7 +15,7 @@ Biome ignores all Markdown (`!**/*.md`) and `docs/`.
 
 ## Stages
 
-Stage 0 Workflow (branch `chore/workflow`) -> 1 Design system -> 2 Bench core -> 3 Site. Details: `docs/superpowers/specs/2026-10-24-workflow-and-architecture-design.md` section 2.
+Stage table: `docs/superpowers/specs/2026-10-24-workflow-and-architecture-design.md` section 2. Current stage: see the open PR / branch.
 
 ## Process: per-component cycle (spec section 3.1)
 
@@ -36,8 +36,8 @@ Small changes skip step 5 but still do TDD and `bun run check`.
 | Load when | Skill |
 | --- | --- |
 | Creating, moving or importing code anywhere | `project-architecture` |
-| Reviewing a finished component (step 5) | `component-review` (Task 8) |
-| Building a `packages/ui` component | `ds-component` (Task 9) |
+| Reviewing a finished component (step 5) | `component-review` (being added in Stage 0) |
+| Building a `packages/ui` component | `ds-component` (being added in Stage 0) |
 | Any feature or bugfix | `superpowers:test-driven-development` |
 
 ## Browser tests

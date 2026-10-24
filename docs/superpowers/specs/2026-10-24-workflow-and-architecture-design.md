@@ -128,7 +128,7 @@ Package names: `@smb/ui`, `@smb/bench`, `@smb/site` (all private; `smb` = stream
   - `tokens/` and `components/<Name>/`. Components import tokens (CSS vars) and shared primitives only, never each other's internals.
   - The package exports only through `src/index.ts`.
 - **Cross-package:** `site → ui`, `site → bench` (types and the summary schema only), `bench → nothing`, `ui → nothing`.
-- **Enforcement:** Biome `noRestrictedImports` for package and module boundaries. If Biome can't express a rule, add `dependency-cruiser` for that rule. This is decided in Stage 0.
+- **Enforcement:** Biome `noRestrictedImports` for package and module boundaries. If Biome can't express a rule, add `dependency-cruiser` for that rule. This is decided in Stage 0. Decision: dependency-cruiser (resolved-path rules) owns package and module boundaries because Biome only matches import specifier text; steiger owns FSD.
 
 ### 5.3 Design system
 

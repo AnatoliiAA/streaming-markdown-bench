@@ -1,6 +1,6 @@
 ---
 name: project-architecture
-description: Use when creating, moving or importing code anywhere in this repo — decides which package/module/FSD layer code belongs to and which imports are allowed
+description: Use when creating, moving or importing code anywhere in this repo
 ---
 
 # Project architecture
@@ -43,9 +43,9 @@ Slices (widgets/features/entities/pages) are folders with segments inside (`ui/`
 | --- | --- | --- |
 | `packages/ui` | itself | any `@smb/*`, `packages/*`, `apps/*` |
 | `packages/bench` | itself | any `@smb/*`, other packages, apps |
-| bench `corpus`, `metrics`, `adapters` | no other bench module | any other bench module |
-| bench `harness` | `adapters`, `metrics` | `corpus`, `runner` |
-| bench `runner` | `harness`, `metrics`, `corpus` | `adapters` |
+| bench `corpus`, `metrics`, `adapters` | no other bench module | any other bench module, other packages, apps |
+| bench `harness` | `adapters`, `metrics` | `corpus`, `runner`, other packages, apps |
+| bench `runner` | `harness`, `metrics`, `corpus` | `adapters`, other packages, apps |
 | `apps/site` | `@smb/ui`, `@smb/bench` (entry points only) | deep paths |
 | Site layers | `app -> pages -> widgets -> features -> entities -> shared`: only layers below | upward imports; same-layer slice to slice |
 

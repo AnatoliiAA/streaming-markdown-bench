@@ -2,11 +2,12 @@
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
+    "rootDir": "..",
     "noEmit": false,
     "emitDeclarationOnly": true,
     "declaration": true,
     "tsBuildInfoFile": "../node_modules/.cache/tsc/tests.tsbuildinfo",
     "outDir": "../node_modules/.cache/tsc/tests"
   },
-  "include": ["."]
+  "include": [".", "../playwright.config.ts"]
 }

@@ -26,6 +26,7 @@ export async function withFile(
   fn: () => Promise<void>,
 ): Promise<void> {
   const full = resolve(repoRoot, relPath);
+  if (existsSync(full)) throw new Error(`withFile: refusing to overwrite existing path ${relPath}`);
   const created: string[] = [];
   let dir = dirname(full);
   while (!existsSync(dir)) {

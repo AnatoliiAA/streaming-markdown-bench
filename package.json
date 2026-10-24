@@ -12,9 +12,11 @@
     "@smb/bench": "workspace:*",
     "@smb/ui": "workspace:*",
     "@types/bun": "^1.4.4",
+    "lefthook": "2.2.2",
     "typescript": "7.0.2"
   },
   "scripts": {
+    "prepare": "lefthook install",
     "check": "biome ci . && tsc -b && bun test && bun run lint:arch",
     "format": "biome check --write .",
     "lint:arch": "echo \"no arch rules yet\""

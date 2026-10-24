@@ -10,7 +10,8 @@
       "!**/test-results",
       "!results",
       "!corpus/cases",
-      "!docs"
+      "!docs",
+      "!**/*.md"
     ]
   },
   "formatter": {

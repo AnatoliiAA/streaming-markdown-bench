@@ -9,7 +9,8 @@
       "!**/playwright-report",
       "!**/test-results",
       "!results",
-      "!corpus/cases"
+      "!corpus/cases",
+      "!docs"
     ]
   },
   "formatter": {

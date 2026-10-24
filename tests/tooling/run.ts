@@ -32,9 +32,9 @@ export async function withFile(
     created.push(dir);
     dir = dirname(dir);
   }
-  mkdirSync(dirname(full), { recursive: true });
-  writeFileSync(full, content);
   try {
+    mkdirSync(dirname(full), { recursive: true });
+    writeFileSync(full, content);
     await fn();
   } finally {
     rmSync(full, { force: true });

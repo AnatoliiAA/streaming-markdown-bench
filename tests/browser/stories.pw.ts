@@ -42,6 +42,11 @@ for (const { id } of stories) {
         await expect(page.locator("#storybook-root")).toHaveScreenshot(`${id}--${theme}.png`, {
           animations: "disabled",
         });
+      } else {
+        test.info().annotations.push({
+          type: "skip",
+          description: "screenshot: baselines are Linux-only (CI)",
+        });
       }
     });
   }
@@ -63,5 +68,41 @@ test.describe("prefers-color-scheme without a theme global", () => {
       getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim(),
     );
     expect(bg).toBe(expected as string);
+
+    // reducedMotion: "reduce" comes from playwright.config.ts.
+    const fast = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue("--duration-fast").trim(),
+    );
+    // The CSS pipeline may serialise 0ms as 0s; both are zero.
+    expect(["0ms", "0s"]).toContain(fast);
+  });
+});
+
+test.describe("OS dark with an explicit light theme global", () => {
+  test.use({ colorScheme: "dark" });
+
+  test("the theme global wins over prefers-color-scheme", async ({ page }) => {
+    const expected = readTokens(loadTokenCss()).light["--color-bg"];
+    expect(expected).toBeDefined();
+
+    const first = stories[0];
+    if (!first) throw new Error("no stories in the Storybook index");
+    await openStory(page, first.id, "light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+
+    // The built CSS may shorten #ffffff to #fff, so compare resolved rgb() values.
+    const [bg, want] = await page.evaluate((hex) => {
+      const probe = document.createElement("span");
+      document.body.append(probe);
+      const resolve = (c: string): string => {
+        probe.style.color = c;
+        return getComputedStyle(probe).color;
+      };
+      const token = getComputedStyle(document.documentElement).getPropertyValue("--color-bg");
+      const out = [resolve(token.trim()), resolve(hex)];
+      probe.remove();
+      return out;
+    }, expected as string);
+    expect(bg).toBe(want);
   });
 });

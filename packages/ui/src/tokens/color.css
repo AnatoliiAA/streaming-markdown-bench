@@ -1,0 +1,67 @@
+:root {
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-border: #e1e4ea;
+  --color-border-strong: #858c9b;
+  --color-text: #16181d;
+  --color-text-muted: #596070;
+  --color-accent: #1f5fd1;
+  --color-accent-hover: #194fb0;
+  --color-on-accent: #ffffff;
+  --color-focus-ring: #1f5fd1;
+  --color-status-match-fg: #14663a;
+  --color-status-match-bg: #e3f5ea;
+  --color-status-diff-fg: #8a5200;
+  --color-status-diff-bg: #fdf0d8;
+  --color-status-error-fg: #a52222;
+  --color-status-error-bg: #fde8e8;
+  --color-status-timeout-fg: #4b5160;
+  --color-status-timeout-bg: #eceef2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #0f1115;
+    --color-bg-subtle: #161920;
+    --color-surface: #1a1d24;
+    --color-border: #2a2f3a;
+    --color-border-strong: #6b7385;
+    --color-text: #e8eaef;
+    --color-text-muted: #9aa2b2;
+    --color-accent: #5b9bff;
+    --color-accent-hover: #7fb2ff;
+    --color-on-accent: #0b1220;
+    --color-focus-ring: #5b9bff;
+    --color-status-match-fg: #6fd39a;
+    --color-status-match-bg: #12281c;
+    --color-status-diff-fg: #f0b95c;
+    --color-status-diff-bg: #2d2108;
+    --color-status-error-fg: #ff8a8a;
+    --color-status-error-bg: #321417;
+    --color-status-timeout-fg: #aab1c0;
+    --color-status-timeout-bg: #22262e;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: #0f1115;
+  --color-bg-subtle: #161920;
+  --color-surface: #1a1d24;
+  --color-border: #2a2f3a;
+  --color-border-strong: #6b7385;
+  --color-text: #e8eaef;
+  --color-text-muted: #9aa2b2;
+  --color-accent: #5b9bff;
+  --color-accent-hover: #7fb2ff;
+  --color-on-accent: #0b1220;
+  --color-focus-ring: #5b9bff;
+  --color-status-match-fg: #6fd39a;
+  --color-status-match-bg: #12281c;
+  --color-status-diff-fg: #f0b95c;
+  --color-status-diff-bg: #2d2108;
+  --color-status-error-fg: #ff8a8a;
+  --color-status-error-bg: #321417;
+  --color-status-timeout-fg: #aab1c0;
+  --color-status-timeout-bg: #22262e;
+}

@@ -14,7 +14,8 @@ Decide where code goes and what it may import. The boundary checker (`bun run li
 | `packages/ui` | `@smb/ui` | Design system: `tokens/`, `components/<Name>/`, entry `src/index.ts` |
 | `packages/bench` | `@smb/bench` | Bench core, modules `corpus metrics adapters harness runner`, entry `src/index.ts` |
 | `apps/site` | `@smb/site` | Results site, Feature-Sliced Design 2.x, root `src/` |
-| `tests/tooling`, `tests/browser` | - | Tooling tests, Playwright tests (outside boundary rules) |
+| `tests/setup` | - | `bun test` preload (happy-dom) + fast setup tests (run by `check`) |
+| `tests/tooling`, `tests/browser` | - | Tooling tests (`test:tooling`, run by `check:all`), Playwright tests (outside boundary rules) |
 | `corpus/`, `results/` | - | Data at repo root |
 
 ## What goes where

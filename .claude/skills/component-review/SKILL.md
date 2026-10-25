@@ -15,7 +15,7 @@ Decide first, from the diff. When unsure whether it is a component, treat it as 
 | --- | --- |
 | DS component (`Slider`), bench detector, adapter, runner pass, FSD slice (`features/replay-speed`) | Config tweak, copy change, a prop added to an existing component, one-line script |
 
-Not a component: run `bun run check` (plus `bun run test:browser` per Axis 1), reply with exactly one line and stop. No nits, no follow-ups, no suggestions. On a failing step (`check` or `test:browser`), classify the failure with the base procedure below.
+Not a component: run `bun run check` (`check:all` per Axis 1; plus `bun run test:browser` per Axis 1), reply with exactly one line and stop. No nits, no follow-ups, no suggestions. On a failing step (`check` or `test:browser`), classify the failure with the base procedure below.
 
 ```
 not a component — check: PASS
@@ -34,7 +34,7 @@ not a component — check: FAIL — <failing step>: caused-by-diff | pre-existin
 
 | Check | How |
 | --- | --- |
-| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun test && bun run lint:arch`). Run `bun run test:browser` (not part of check) when the diff touches `packages/ui/**`, `apps/site/**`, `tests/browser/**` or `playwright.config.ts`. If it cannot run (no browser installed), say so (full review: in `evidence:`; non-component: `not run (<reason>)` in the one-line suffix); never skip silently. |
+| Everything green | Run `bun run check` as ONE command (`biome ci . && tsc -b && bun run test && bun run lint:arch`). Run `bun run check:all` instead (`check` + `test:tooling`) when the diff touches `biome.json`, `.dependency-cruiser.cjs`, `steiger.config.mjs`, `lefthook.yml`, `package.json`, `tsconfig*`, `playwright.config.ts`, `.github/**`, `tests/tooling/**`. Run `bun run test:browser` (not part of check) when the diff touches `packages/ui/**`, `apps/site/**`, `tests/browser/**` or `playwright.config.ts`. If it cannot run (no browser installed), say so (full review: in `evidence:`; non-component: `not run (<reason>)` in the one-line suffix); never skip silently. |
 | Public API | `git diff` on every `index.ts`: for each renamed/removed/changed export, grep all consumers; a stale consumer is a break (`tsc` shows it) |
 | Outside behavior | Files changed outside the component are justified by the task |
 

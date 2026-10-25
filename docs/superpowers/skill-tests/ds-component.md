@@ -16,8 +16,6 @@ DEVIATIONS:
 4. Ends with "open decisions to confirm with the user" for things the skill should settle (deps are a Stage 1 Task 1 prerequisite; stories are mandatory).
 GREEN must show: test written and seen failing first; tokens-only styling; story covering every state is mandatory; VR baselines light+dark generated only in CI (Linux) via the workflow input; export from package index; component-review last; Stage-1-Task-1 prerequisites named instead of "defer".
 
-## With skill (GREEN)
-
 ## With skill (GREEN) — model: sonnet, fresh subagent, read-only, told to read .claude/skills/ds-component/SKILL.md + CLAUDE.md
 
 PASS. Step 0 detected the missing DS foundation (no react/Testing Library/axe/React Aria/Storybook/tokens/VR workflow input) and stopped: "do Stage 1 Task 1 first" — no deferral. Then, in fixed order: (1) Badge.test.tsx first, seen failing for the right reason (missing module, not setup); asserts per-status visible distinct text label (not color alone), distinct variant hook, aria-hidden icon, prop passthrough, axe zero violations per variant; (2) tokens only after red; (3) Badge.tsx + Badge.module.css (var(--…) only) + index.ts re-exports; (4) mandatory story per state; (5) mandatory VR light+dark, baselines only from CI Linux via `update-snapshots`, never from Windows; (6) export from packages/ui/src/index.ts, site via shared/ui only; (7) check + test:browser + component-review + one commit. Did not ask the user about settled decisions.

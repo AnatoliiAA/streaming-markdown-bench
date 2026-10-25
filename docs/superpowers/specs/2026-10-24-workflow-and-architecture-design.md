@@ -156,19 +156,22 @@ Package names: `@smb/ui`, `@smb/bench`, `@smb/site` (all private; `smb` = stream
 | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Runtime, package manager, workspaces, scripts | **Bun** (one pinned version; `packageManager` field)                                                                           |
 | Lint + format                                 | **Biome** (`biome ci` in CI, `biome check --write` locally)                                                                    |
-| Types                                         | `tsc --noEmit -b` (Biome doesn't type-check); TS `strict`, `noUncheckedIndexedAccess`                                          |
+| Types                                         | `tsc -b` (composite projects emit declarations to `node_modules/.cache`; Biome doesn't type-check); TS `strict`, `noUncheckedIndexedAccess` |
 | Unit + component tests                        | `bun test` + happy-dom (preload) + Testing Library + axe-core                                                                  |
 | Browser tests, visual regression              | Playwright (Chromium), `toHaveScreenshot` over Storybook stories, light + dark                                                 |
 | Build                                         | Vite (site, harness, Storybook)                                                                                                |
 | Pre-commit                                    | lefthook: `biome check --staged`                                                                                               |
-| CI                                            | GitHub Actions: `bun install --frozen-lockfile`, `bun run check`, Playwright tests; Linux-generated VR baselines are canonical |
+| CI                                            | GitHub Actions: `bun install --frozen-lockfile`, `bun run check:all`, Playwright tests; Linux-generated VR baselines are canonical |
 
 Root scripts:
-- `check` = `biome ci && tsc -b && bun test`;
-- `test:browser` = Playwright;
+- `check` = `biome ci . && tsc -b && bun run test && bun run lint:arch` (fast; before every commit);
+- `check:all` = `bun run check && bun run test:tooling` (before pushing, when touching tooling config; CI);
+- `test` = `bun test` without `tests/tooling/`; `test:tooling` = `bun test ./tests/tooling` (slow tooling tests);
+- `lint:arch` = steiger + dependency-cruiser (§5.2);
+- `test:browser` = `bunx playwright test` (Playwright under Node);
 - `format` = `biome check --write`.
 
-**Bun + Playwright risk:** Stage 0 runs a smoke Playwright test under Bun first. If it is unreliable, browser tests run through `bunx --bun=false playwright test` (Node), and everything else stays on Bun. The outcome is recorded in `CLAUDE.md`.
+**Bun + Playwright risk:** Stage 0 runs a smoke Playwright test under Bun first. If it is unreliable, browser tests run through `bunx playwright test` (Node), and everything else stays on Bun. The outcome is recorded in `CLAUDE.md`.
 
 **Line endings:** `.gitattributes` with `* text=auto eol=lf` (the dev machine has `core.autocrlf=true`); Biome is configured for LF.
 

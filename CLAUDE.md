@@ -6,7 +6,10 @@ Portfolio repo: a benchmark of streaming-markdown renderers (`packages/bench`), 
 
 | Command | What it does |
 | --- | --- |
-| `bun run check` | `biome ci . && tsc -b && bun test && bun run lint:arch`. Must exit 0 before every commit. `bun test` is currently slow (tooling tests clone the repo and run the boundary matrix). |
+| `bun run check` | `biome ci . && tsc -b && bun run test && bun run lint:arch`. Must exit 0 before every commit. |
+| `bun run check:all` | `bun run check && bun run test:tooling`. Run before pushing and whenever you touch tooling config. CI runs it. |
+| `bun run test` | `bun test` without `tests/tooling/` (unit, component, `tests/setup/`). |
+| `bun run test:tooling` | `bun test ./tests/tooling`: slow tooling tests (clone the repo, run the boundary matrix). |
 | `bun run format` | `biome check --write .` |
 | `bun run lint:arch` | Boundary check: dependency-cruiser + steiger (see skill `project-architecture`) |
 | `bun run test:browser` | Playwright (`tests/browser/*.pw.ts`). Not part of `check` (needs a browser); run `bunx playwright install chromium` once per machine. CI runs both. |
@@ -42,7 +45,7 @@ Small changes skip step 5 but still do TDD and `bun run check`.
 
 ## Browser tests
 
-Playwright runs under Node, not Bun: `test:browser` = `bunx playwright test`. `bunx --bun playwright test` failed 3/3 on Bun 1.4.4 + @playwright/test 1.64.1 (worker process exits with code 1). Retry Bun when either is upgraded. Browser tests are `tests/browser/*.pw.ts`, never `*.spec.ts` (`bun test` would pick those up).
+Playwright runs under Node, not Bun: `test:browser` = `bunx playwright test`; requires Node ≥ 20 on PATH (bunx otherwise shims node to Bun, which fails). `bunx --bun playwright test` failed 3/3 on Bun 1.4.4 + @playwright/test 1.64.1 (worker process exits with code 1). Retry Bun when either is upgraded. Browser tests are `tests/browser/*.pw.ts`, never `*.spec.ts` (`bun test` would pick those up).
 
 ## Shell (this machine)
 

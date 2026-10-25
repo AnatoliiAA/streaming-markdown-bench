@@ -10,11 +10,14 @@ const TEXT_PAIRS: [string, string][] = [
   ["--color-text", "--color-bg-subtle"],
   ["--color-text-muted", "--color-bg"],
   ["--color-text-muted", "--color-surface"],
+  ["--color-text-muted", "--color-bg-subtle"],
   ["--color-on-accent", "--color-accent"],
   ["--color-on-accent", "--color-accent-hover"],
   ...STATUSES.map((s): [string, string] => [`--color-status-${s}-fg`, `--color-status-${s}-bg`]),
 ];
 
+// --color-border is deliberately excluded: it is a decorative separator, not a required
+// boundary; --color-border-strong carries control identification.
 const UI_PAIRS: [string, string][] = [
   ["--color-border-strong", "--color-bg"],
   ["--color-accent", "--color-bg"],
@@ -117,6 +120,7 @@ describe("tokens", () => {
       "--radius-lg": "8px",
       "--border-width": "1px",
       "--focus-ring-width": "2px",
+      "--focus-ring-offset": "2px",
       "--duration-fast": "120ms",
       "--duration-normal": "200ms",
       "--ease-standard": "cubic-bezier(0.2, 0, 0, 1)",

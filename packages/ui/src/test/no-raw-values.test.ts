@@ -59,6 +59,65 @@ describe("findRawValues", () => {
   });
 });
 
+describe("findRawValues: ordinary CSS and bypasses", () => {
+  const clean = [
+    "display: flex",
+    "position: relative",
+    "cursor: pointer",
+    "border: var(--border-width) solid var(--color-border)",
+    "margin: 0 !important",
+    "max-width: max(var(--a), 0)",
+    "--gap: var(--space-2)",
+    "line-height: 1.5",
+    "opacity: 1",
+    "transition: opacity var(--duration-fast) var(--ease-standard)",
+    "width: calc(100% - var(--space-3))",
+    "font-family: var(--font-mono)",
+  ];
+  const raw = [
+    "margin: -4px",
+    "color: red",
+    "--gap: 4px",
+    "z-index: 10",
+    "--c: #fff",
+    "padding: 4px !important",
+    "opacity: 0.5",
+    "background: white",
+  ];
+  test.each(clean)("allows %s", (d) => {
+    expect(findRawValues(`.a { ${d}; }`)).toEqual([]);
+  });
+  test.each(raw)("reports %s", (d) => {
+    expect(findRawValues(`.a { ${d}; }`)).toHaveLength(1);
+  });
+});
+
+describe("styles.css and package export", () => {
+  const dir = fileURLToPath(new URL("..", import.meta.url));
+  test("imports fonts, then tokens, then base, all present", () => {
+    const imports = [
+      ...readFileSync(join(dir, "styles.css"), "utf8").matchAll(/@import "([^"]+)"/g),
+    ].map((m) => m[1]);
+    expect(imports).toEqual([
+      "@fontsource-variable/inter/index.css",
+      "@fontsource-variable/jetbrains-mono/index.css",
+      "./tokens/color.css",
+      "./tokens/space.css",
+      "./tokens/typography.css",
+      "./tokens/radius.css",
+      "./tokens/motion.css",
+      "./tokens/z.css",
+      "./base.css",
+    ]);
+    for (const i of imports) if (i?.startsWith("./")) expect(existsSync(join(dir, i))).toBe(true);
+  });
+  test("package exports ./styles.css to an existing file", () => {
+    const pkg = JSON.parse(readFileSync(join(dir, "..", "package.json"), "utf8"));
+    expect(pkg.exports["./styles.css"]).toBe("./src/styles.css");
+    expect(existsSync(join(dir, "..", pkg.exports["./styles.css"]))).toBe(true);
+  });
+});
+
 describe("component CSS modules", () => {
   test("contain no raw colors or sizes", () => {
     const root = fileURLToPath(new URL("../components/", import.meta.url));

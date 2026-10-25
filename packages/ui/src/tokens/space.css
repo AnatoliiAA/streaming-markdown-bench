@@ -12,4 +12,5 @@
   --size-control-md: 2.25rem;
   --border-width: 1px;
   --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
 }

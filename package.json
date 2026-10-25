@@ -23,7 +23,10 @@
   "scripts": {
     "prepare": "lefthook install",
     "test:browser": "bunx playwright test",
-    "check": "biome ci . && tsc -b && bun test && bun run lint:arch",
+    "test": "bun test --path-ignore-patterns='tests/tooling/**' --pass-with-no-tests",
+    "test:tooling": "bun test ./tests/tooling",
+    "check": "biome ci . && tsc -b && bun run test && bun run lint:arch",
+    "check:all": "bun run check && bun run test:tooling",
     "format": "biome check --write .",
     "lint:arch": "steiger ./apps/site/src && depcruise packages apps --config .dependency-cruiser.cjs"
   }

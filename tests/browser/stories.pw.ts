@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
-import { readTokens } from "../../packages/ui/src/tokens/read-tokens";
+import { loadTokenCss, readTokens } from "../../packages/ui/src/tokens/read-tokens";
 import { listStories, shouldAssertScreenshots } from "./story-index";
 
 const THEMES = ["light", "dark"] as const;
@@ -51,13 +51,13 @@ test.describe("prefers-color-scheme without a theme global", () => {
   test.use({ colorScheme: "dark" });
 
   test("html resolves --color-bg to the dark token", async ({ page }) => {
-    const css = readFileSync(uiPath("src/tokens/color.css"), "utf8");
-    const expected = readTokens(css).darkMedia["--color-bg"];
+    const expected = readTokens(loadTokenCss()).darkMedia["--color-bg"];
     expect(expected).toBeDefined();
 
     const first = stories[0];
     if (!first) throw new Error("no stories in the Storybook index");
     await openStory(page, first.id);
+    await expect(page.locator("html")).not.toHaveAttribute("data-theme");
 
     const bg = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--color-bg").trim(),

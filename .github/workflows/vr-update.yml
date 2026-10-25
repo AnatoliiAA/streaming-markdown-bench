@@ -2,26 +2,35 @@ name: vr-update
 
 # Regenerates the visual-regression baselines on Linux and uploads them as the `vr-baselines`
 # artifact. It does NOT push: a push made with GITHUB_TOKEN does not trigger CI, so the PR head
-# would lack the required `check`. Run `gh workflow run vr-update.yml --ref <branch>`, then
-# download the artifact into tests/browser/__screenshots__ and commit + push it yourself.
+# would lack the required `check`. Triggers:
+#   - pre-merge (normal case): add the `update-vr` label to the PR (`gh pr edit <pr> --add-label
+#     update-vr`); workflow_dispatch cannot run a workflow that is not yet on main;
+#   - on main / without a PR: `gh workflow run vr-update.yml --ref <branch>`.
+# Then download the artifact into tests/browser/__screenshots__ and commit + push it yourself.
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [labeled]
 
 permissions:
   contents: read
 
 jobs:
   update:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'update-vr'
     runs-on: ubuntu-latest
     steps:
       - name: Refuse to run on main
-        if: github.ref_name == 'main'
+        if: github.ref_name == 'main' || github.head_ref == 'main'
         run: |
-          echo "::error::Run vr-update on a feature branch: gh workflow run vr-update.yml --ref <branch>"
+          echo "::error::vr-update regenerates baselines for a feature branch, never main"
           exit 1
 
       - uses: actions/checkout@v4
+        with:
+          # pull_request: the PR head branch (not the merge commit); workflow_dispatch: --ref.
+          ref: ${{ github.head_ref || github.ref }}
 
       - uses: oven-sh/setup-bun@v2
         with:

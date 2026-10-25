@@ -33,10 +33,13 @@ The DS foundation must exist: React + react-dom, Testing Library, `axe-core`, Re
 4. **VR (mandatory).** VR is ONE shared Playwright spec, `tests/browser/stories.pw.ts` (Stage 1 Task 3), that iterates every story in light and dark: axe with all rules (incl. color-contrast) on every platform, screenshots on Linux only. Components never write their own VR spec; a new story is picked up automatically, so step 3 is what adds the screenshots. Tag a story `!vr` only if it cannot be screenshotted deterministically.
    - Baselines are generated ONLY in CI on Linux by `.github/workflows/vr-update.yml`. Never generate or commit them from Windows or macOS dev machines (font rendering differs).
    - Refresh procedure (the only way baselines are committed):
-     1. `gh workflow run vr-update.yml --ref <branch>`
-     2. `gh run watch <id>`
-     3. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`
-     4. Commit `test(vr): baselines from CI run <id>` and push.
+     1. Start the run. Pre-merge (normal case): `gh pr edit <pr> --add-label update-vr`. On main or without a PR: `gh workflow run vr-update.yml --ref <branch>`.
+     2. `gh run list --workflow vr-update.yml --branch <branch> -L 1 --json databaseId --jq '.[0].databaseId'` gives `<id>`.
+     3. `gh run watch <id>`
+     4. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`
+     5. Commit `test(vr): baselines from CI run <id>` and push.
+     6. Label path only: `gh pr edit <pr> --remove-label update-vr`.
+   - When a story is renamed or removed, delete its old PNGs in `tests/browser/__screenshots__` before committing (the download never deletes files).
 5. **Export** from `packages/ui/src/index.ts`. `<Name>/index.ts` re-exports only. The site consumes the component through `apps/site/src/shared/ui` only, never by deep path into `packages/ui`.
 6. **Verify and review.** `bun run check` (exit 0), `bun run test:browser` (always; VR is mandatory), then `component-review` (fresh subagent). Fix findings, re-run check. One commit per component.
 

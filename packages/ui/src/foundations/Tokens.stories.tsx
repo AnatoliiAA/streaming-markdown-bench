@@ -1,12 +1,19 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import colorCss from "../tokens/color.css?raw";
+import spaceCss from "../tokens/space.css?raw";
+import typographyCss from "../tokens/typography.css?raw";
 
-/** Every `--color-*` custom property declared in tokens/color.css, in declaration order. */
-const COLOR_TOKENS = [...new Set(colorCss.match(/--color-[\w-]+(?=\s*:)/g) ?? [])];
+/** Custom properties named `<prefix>…` declared in a token file, unique, in declaration order. */
+const tokenNames = (css: string, prefix: string): string[] => [
+  ...new Set(
+    [...css.matchAll(/(--[\w-]+)\s*:/g)].map((m) => m[1] ?? "").filter((n) => n.startsWith(prefix)),
+  ),
+];
 
-const FONT_SIZES = ["xs", "sm", "md", "lg", "xl", "2xl"].map((s) => `--font-size-${s}`);
-const SPACES = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => `--space-${n}`);
+const COLOR_TOKENS = tokenNames(colorCss, "--color-");
+const FONT_SIZES = tokenNames(typographyCss, "--font-size-");
+const SPACES = tokenNames(spaceCss, "--space-");
 
 const cell: CSSProperties = {
   padding: "var(--space-2) var(--space-3)",

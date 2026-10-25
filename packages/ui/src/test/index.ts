@@ -1,10 +1,7 @@
-import { afterEach } from "bun:test";
-import { cleanup, type RenderResult, render } from "@testing-library/react";
+import { type RenderResult, render } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import axe from "axe-core";
 import type { ReactElement } from "react";
-
-afterEach(cleanup);
 
 export function renderUI(ui: ReactElement): RenderResult {
   return render(ui);

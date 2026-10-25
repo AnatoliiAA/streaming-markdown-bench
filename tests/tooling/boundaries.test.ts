@@ -1,10 +1,11 @@
-import { expect, test } from "bun:test";
+import { expect, setDefaultTimeout, test } from "bun:test";
 import { type RunResult, run, withFile } from "./run";
 
 // Contract: the import-boundary matrix from the Stage 0 plan (Task 4). The tool behind each
 // row is an implementation detail; the checker is `biome lint <file> && bun run lint:arch`.
 // `biome lint` is only a generic lint sanity step on the row's file; boundary enforcement lives
 // in `lint:arch` (dependency-cruiser for packages/ and bench modules, steiger for FSD in apps/site).
+// tests/ is outside the cruise scope by design (lint:arch cruises only packages/ and apps/).
 
 const VIOLATIONS: [file: string, source: string, why: string][] = [
   ["packages/ui/src/x.ts", 'import "@smb/bench";', "ui → bench"],
@@ -27,14 +28,18 @@ const VIOLATIONS: [file: string, source: string, why: string][] = [
     'import type { R } from "../runner";\nexport type X = R;',
     "type-only metrics → runner",
   ],
+  // Final-review rows: DS component isolation and site → @smb/ui only via shared/ui.
+  ["packages/ui/src/components/A/A.tsx", 'import "../B/B";', "ui component deep import"],
+  ["apps/site/src/features/b/ui/x.ts", 'export * from "@smb/ui";', "site slice → @smb/ui"],
+  ["apps/site/src/app/x.ts", 'import "@smb/ui";', "site app → @smb/ui (not via shared/ui)"],
 ];
 
 const ALLOWED: [file: string, source: string][] = [
   ["packages/bench/src/runner/x.ts", 'import "../metrics";'],
   ["packages/bench/src/harness/x.ts", 'import "../adapters";'],
-  ["apps/site/src/app/x.ts", 'import "@smb/ui";'],
-  // The root package and tests/ sit outside the layer rules: tests may use package entry points.
-  ["tests/tooling/x.test.ts", 'import "@smb/bench";'],
+  ["apps/site/src/app/x.ts", 'import "@smb/bench";'],
+  ["apps/site/src/shared/ui/x.ts", 'import "@smb/ui";'],
+  ["packages/ui/src/components/A/A.tsx", 'import "../B";'],
   ["apps/site/src/features/b/model/index.ts", 'import "../../../entities/a";'],
   ["packages/bench/src/runner/a/b.ts", 'import "../c";'],
   ["packages/bench/src/metrics/x.ts", 'import "node:fs";'],
@@ -58,6 +63,9 @@ const STUBS: Record<string, string[]> = {
     "apps/site/src/features/b/index.ts",
   ],
   '"../c"': ["packages/bench/src/runner/c.ts"],
+  '"../B/B"': ["packages/ui/src/components/B/B.ts", "packages/ui/src/components/B/index.ts"],
+  '"../B"': ["packages/ui/src/components/B/B.ts", "packages/ui/src/components/B/index.ts"],
+  'export * from "@smb/ui"': ["apps/site/src/features/b/index.ts"],
 };
 
 const output = (r: RunResult) => `${r.stdout}\n${r.stderr}`.replaceAll("\\", "/");
@@ -80,6 +88,9 @@ async function withRow(file: string, source: string, fn: () => Promise<void>): P
 
 /** "packages/bench/src/metrics/x.ts" -> "metrics/x.ts": enough to identify the offending file. */
 const tail = (file: string) => file.split("/").slice(-2).join("/");
+
+// Each row spawns biome + steiger + depcruise; a cold first row can exceed bun's 5 s default.
+setDefaultTimeout(30_000);
 
 test.each(VIOLATIONS)("%s rejects %s (%s)", async (file, source, why) => {
   await withRow(file, source, async () => {

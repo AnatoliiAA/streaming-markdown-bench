@@ -47,6 +47,23 @@ module.exports = {
       to: { path: `${BENCH}[^/]+/`, pathNot: `${BENCH}($1/|[^/]+/index\\.ts$)` },
     },
     {
+      name: "ui-no-deep-component-import",
+      comment: "another DS component is reached only through its components/<Name>/index.ts",
+      severity: "error",
+      from: { path: "^packages/ui/src/components/([^/]+)/" },
+      to: {
+        path: "^packages/ui/src/components/",
+        pathNot: "^packages/ui/src/components/($1/|[^/]+/index\\.ts$)",
+      },
+    },
+    {
+      name: "site-ui-only-via-shared",
+      comment: "apps/site consumes @smb/ui only through shared/ui (which re-exports it)",
+      severity: "error",
+      from: { path: "^apps/site/src/(?!shared/ui/)" },
+      to: { path: "^packages/ui/" },
+    },
+    {
       name: "no-deep-package-import",
       comment: "another workspace package is reached only through its src/index.ts entry",
       severity: "error",

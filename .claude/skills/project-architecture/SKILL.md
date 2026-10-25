@@ -42,11 +42,12 @@ Slices (widgets/features/entities/pages) are folders with segments inside (`ui/`
 | From | May import | Never |
 | --- | --- | --- |
 | `packages/ui` | itself | any `@smb/*`, `packages/*`, `apps/*` |
+| ui `components/<A>/` | own files; another component via its `index.ts` | another component's inner files |
 | `packages/bench` | itself | any `@smb/*`, other packages, apps |
 | bench `corpus`, `metrics`, `adapters` | no other bench module | any other bench module, other packages, apps |
 | bench `harness` | `adapters`, `metrics` | `corpus`, `runner`, other packages, apps |
 | bench `runner` | `harness`, `metrics`, `corpus` | `adapters`, other packages, apps |
-| `apps/site` | `@smb/ui`, `@smb/bench` (entry points only) | deep paths |
+| `apps/site` | `@smb/ui` (only from `shared/ui`), `@smb/bench` (entry points only) | deep paths; `@smb/ui` outside `shared/ui` |
 | Site layers | `app -> pages -> widgets -> features -> entities -> shared`: only layers below | upward imports; same-layer slice to slice |
 
 ## Public-API rule
@@ -82,6 +83,6 @@ There is no path alias in Stage 0 and a bare `"shared/ui"` does not resolve. An 
 | Tool / config | Covers |
 | --- | --- |
 | steiger (`steiger.config.mjs`) | FSD in `apps/site/src`: layer direction, slice isolation, public API. `fsd/insignificant-slice` is off |
-| dependency-cruiser (`.dependency-cruiser.cjs`) | Resolved-path rules: package isolation, no deep package imports, bench module directions, no deep bench-module imports, unresolvable imports. Parses TS via `@swc/core` (TypeScript 7 has no JS API) |
+| dependency-cruiser (`.dependency-cruiser.cjs`) | Resolved-path rules: package isolation, no deep package imports, bench module directions, no deep bench-module imports, DS components reached only via their `index.ts`, site reaches `@smb/ui` only from `shared/ui`, unresolvable imports. Parses TS via `@swc/core` (TypeScript 7 has no JS API) |
 
 Run `bun run lint:arch` after moving or adding imports. A violation means the code is in the wrong place or imports the wrong thing: move the code or go through the public API.

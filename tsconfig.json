@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/ui" },
+    { "path": "packages/bench" },
+    { "path": "apps/site" },
+    { "path": "tests" }
+  ]
+}

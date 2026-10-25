@@ -18,10 +18,10 @@
 
 ## 2. Overall plan (two phases)
 
-| Phase | Weeks | Output |
-|---|---|---|
-| **1. Bench** (this spec) | 1–3 | Open-source benchmark and conformance suite, public results site, data-driven article |
-| **2. Fix the biggest gap** (separate spec, later) | 4–8 | Either a small focused library (most likely accessibility and stability while streaming) or upstream PRs to existing libraries, based on the Phase 1 findings |
+| Phase                                             | Weeks | Output                                                                                                                                                        |
+| ------------------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1. Bench** (this spec)                          | 1–3   | Open-source benchmark and conformance suite, public results site, data-driven article                                                                         |
+| **2. Fix the biggest gap** (separate spec, later) | 4–8   | Either a small focused library (most likely accessibility and stability while streaming) or upstream PRs to existing libraries, based on the Phase 1 findings |
 
 Phase 2 is designed only after Phase 1 produces data.
 
@@ -53,10 +53,10 @@ Each case is one JSON file:
 
 ```ts
 type StreamCase = {
-  id: string;                 // "tables-wide-01"
+  id: string; // "tables-wide-01"
   source: "claude" | "gpt" | "synthetic";
-  tags: string[];             // ["table", "code", "long", "adversarial"]
-  text: string;               // full final markdown
+  tags: string[]; // ["table", "code", "long", "adversarial"]
+  text: string; // full final markdown
   chunks: { delta: string; t: number }[]; // t = ms since stream start
 };
 ```
@@ -74,7 +74,7 @@ type StreamCase = {
 ```ts
 interface RendererAdapter {
   name: string;
-  version: string;            // read from package.json
+  version: string; // read from package.json
   mount(el: HTMLElement): {
     push(delta: string): void;
     end(): void;
@@ -104,15 +104,15 @@ Playwright with Chromium. For each (adapter × case × chunking policy):
 
 ### 4.4 Metrics
 
-| Group | Metric | How it is measured |
-|---|---|---|
-| Performance | Frame time p50/p95, long tasks count, total time, peak JS heap | rAF timestamps, `PerformanceObserver('longtask')`, CDP `Performance.getMetrics` |
-| Stability | Cumulative layout shift | `PerformanceObserver('layout-shift')` |
-| Stability | **Block flips** | After each chunk, snapshot the tag of every top-level block by index. A flip is a change of tag (or block type) of a block already shown, e.g. `p` → `h2` or `p` → `pre`. |
-| Correctness | Final DOM match | Normalized HTML compared to the reference (full `text` through micromark + GFM). Reported as match or diff. |
-| Correctness | **Raw syntax leaks** | Number of intermediate snapshots whose visible text contains markdown syntax (`**`, `__`, a code fence, `](`) that is absent from the reference visible text |
-| Accessibility | Live-region updates | Count of DOM mutations inside `aria-live` regions, i.e. how many times a screen reader would announce something |
-| Accessibility | A11y tree churn | Playwright accessibility snapshots after each chunk, diffed. Counts role/name changes of nodes that were already shown. |
+| Group         | Metric                                                         | How it is measured                                                                                                                                                        |
+| ------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Performance   | Frame time p50/p95, long tasks count, total time, peak JS heap | rAF timestamps, `PerformanceObserver('longtask')`, CDP `Performance.getMetrics`                                                                                           |
+| Stability     | Cumulative layout shift                                        | `PerformanceObserver('layout-shift')`                                                                                                                                     |
+| Stability     | **Block flips**                                                | After each chunk, snapshot the tag of every top-level block by index. A flip is a change of tag (or block type) of a block already shown, e.g. `p` → `h2` or `p` → `pre`. |
+| Correctness   | Final DOM match                                                | Normalized HTML compared to the reference (full `text` through micromark + GFM). Reported as match or diff.                                                               |
+| Correctness   | **Raw syntax leaks**                                           | Number of intermediate snapshots whose visible text contains markdown syntax (`**`, `__`, a code fence, `](`) that is absent from the reference visible text              |
+| Accessibility | Live-region updates                                            | Count of DOM mutations inside `aria-live` regions, i.e. how many times a screen reader would announce something                                                           |
+| Accessibility | A11y tree churn                                                | Playwright accessibility snapshots after each chunk, diffed. Counts role/name changes of nodes that were already shown.                                                   |
 
 Accessibility metrics are an **approximation**. Five cases get a manual check in NVDA (Windows) and VoiceOver (macOS), and the notes are stored in `results/manual-a11y/`.
 
@@ -169,7 +169,7 @@ aggregate ──▶ results/summary.json ──▶ site build ──▶ static d
   - syntax-leak detector;
   - normalized-HTML comparison;
   - aggregation.
-  Each detector gets hand-made fixtures where the expected count is known.
+    Each detector gets hand-made fixtures where the expected count is known.
 - **Adapter contract test:** every adapter renders 3 tiny fixtures (paragraph, list, code block) to the expected normalized HTML. This catches broken adapters before benchmarking.
 - **Runner smoke test:** one short case per adapter in CI; asserts that a valid result JSON is produced.
 - **Replay determinism test:** the same case is run twice, and the chunk boundaries and order of DOM snapshots are asserted to be identical.
@@ -185,12 +185,12 @@ aggregate ──▶ results/summary.json ──▶ site build ──▶ static d
 
 ## 10. Risks
 
-| Risk | Mitigation |
-|---|---|
-| Metrics look arbitrary or unfair to library authors | Publish the methodology, link every metric to its code, invite authors to review the adapters before publishing |
-| Perf noise makes rankings unstable | Median of 5 runs, fixed throttling, show confidence ranges rather than a single winner |
-| Scope creep into Phase 2 | Phase 2 needs its own spec. Phase 1 is done when §3 is met. |
-| Time (evenings only) | Order of work: corpus + 2 adapters + stability metrics first. These make a publishable result even if the rest slips. |
+| Risk                                                | Mitigation                                                                                                            |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Metrics look arbitrary or unfair to library authors | Publish the methodology, link every metric to its code, invite authors to review the adapters before publishing       |
+| Perf noise makes rankings unstable                  | Median of 5 runs, fixed throttling, show confidence ranges rather than a single winner                                |
+| Scope creep into Phase 2                            | Phase 2 needs its own spec. Phase 1 is done when §3 is met.                                                           |
+| Time (evenings only)                                | Order of work: corpus + 2 adapters + stability metrics first. These make a publishable result even if the rest slips. |
 
 ## 11. Next step
 

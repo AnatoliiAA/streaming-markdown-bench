@@ -1,0 +1,40 @@
+name: vr-update
+
+# Regenerates the visual-regression baselines on Linux and uploads them as the `vr-baselines`
+# artifact. It does NOT push: a push made with GITHUB_TOKEN does not trigger CI, so the PR head
+# would lack the required `check`. Run `gh workflow run vr-update.yml --ref <branch>`, then
+# download the artifact into tests/browser/__screenshots__ and commit + push it yourself.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refuse to run on main
+        if: github.ref_name == 'main'
+        run: |
+          echo "::error::Run vr-update on a feature branch: gh workflow run vr-update.yml --ref <branch>"
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - run: bun install --frozen-lockfile
+
+      - run: bunx playwright install --with-deps chromium
+
+      - run: bunx playwright test tests/browser/stories.pw.ts --update-snapshots
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vr-baselines
+          path: tests/browser/__screenshots__
+          if-no-files-found: error

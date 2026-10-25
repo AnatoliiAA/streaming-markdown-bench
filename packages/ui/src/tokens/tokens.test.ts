@@ -11,6 +11,8 @@ const TEXT_PAIRS: [string, string][] = [
   ["--color-text-muted", "--color-bg"],
   ["--color-text-muted", "--color-surface"],
   ["--color-text-muted", "--color-bg-subtle"],
+  ["--color-accent", "--color-bg"],
+  ["--color-accent", "--color-surface"],
   ["--color-on-accent", "--color-accent"],
   ["--color-on-accent", "--color-accent-hover"],
   ...STATUSES.map((s): [string, string] => [`--color-status-${s}-fg`, `--color-status-${s}-bg`]),
@@ -20,6 +22,8 @@ const TEXT_PAIRS: [string, string][] = [
 // boundary; --color-border-strong carries control identification.
 const UI_PAIRS: [string, string][] = [
   ["--color-border-strong", "--color-bg"],
+  ["--color-border-strong", "--color-surface"],
+  ["--color-border-strong", "--color-bg-subtle"],
   ["--color-accent", "--color-bg"],
   ["--color-focus-ring", "--color-bg"],
   ["--color-focus-ring", "--color-surface"],
@@ -118,6 +122,8 @@ describe("tokens", () => {
       "--radius-sm": "2px",
       "--radius-md": "4px",
       "--radius-lg": "8px",
+      "--radius-full": "9999px",
+      "--opacity-disabled": "0.5",
       "--border-width": "1px",
       "--focus-ring-width": "2px",
       "--focus-ring-offset": "2px",

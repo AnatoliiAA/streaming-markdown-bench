@@ -16,7 +16,7 @@ interface Block {
   body: string;
 }
 
-const TOKEN_FILES = ["color", "space", "typography", "radius", "motion", "z"] as const;
+const TOKEN_FILES = ["color", "space", "typography", "radius", "motion", "effects", "z"] as const;
 
 /** Splits CSS into top-level `selector { body }` blocks (braces balanced, comments stripped). */
 function topBlocks(css: string): Block[] {

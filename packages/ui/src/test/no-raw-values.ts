@@ -1,9 +1,10 @@
 // Guard helper: finds raw colors/sizes in component CSS modules.
-// Flags (a) color syntax: hex, color functions, CSS named colors (transparent and
-// currentColor are allowed) and (b) numeric literals: any non-zero number with a unit,
-// a percentage other than 0/100%, or a non-zero unitless number, unless it is a
-// multiplier inside calc()/min()/max()/clamp() or a normal unitless value
-// (line-height, flex, flex-grow/shrink, order, opacity 1). Plain identifiers
+// Flags (a) color syntax: hex, color functions, CSS named colors (transparent,
+// currentColor and the CSS system colors such as Canvas/CanvasText/GrayText are allowed)
+// and (b) numeric literals: any non-zero number with a length/time unit or a non-zero
+// unitless number, unless it is a multiplier inside calc()/min()/max()/clamp() or a repeat() count or a
+// normal unitless value (line-height, flex, flex-grow/shrink, order, opacity 1,
+// aspect-ratio). Allowed units: % (any value), fr, and angles (deg, turn, rad). Plain identifiers
 // (flex, relative, solid, ...) pass. Custom properties (--x) are checked like any
 // other declaration. Scope: declarations only. At-rule preludes (@media queries)
 // are out of scope.
@@ -24,12 +25,19 @@ const NAMED_COLORS = new Set(
     "paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red " +
     "rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue " +
     "slategray slategrey snow springgreen steelblue tan teal thistle tomato turquoise violet wheat white " +
-    "whitesmoke yellow yellowgreen canvas canvastext field fieldtext highlight highlighttext linktext " +
-    "buttonface buttontext graytext"
+    "whitesmoke yellow yellowgreen"
   ).split(" "),
 );
-const UNITLESS_PROPS = new Set(["line-height", "flex", "flex-grow", "flex-shrink", "order"]);
-const MATH_FNS = new Set(["calc", "min", "max", "clamp"]);
+const UNITLESS_PROPS = new Set([
+  "line-height",
+  "flex",
+  "flex-grow",
+  "flex-shrink",
+  "order",
+  "aspect-ratio",
+]);
+const ALLOWED_UNITS = new Set(["%", "fr", "deg", "turn", "rad"]);
+const MATH_FNS = new Set(["calc", "min", "max", "clamp", "repeat"]);
 
 function stripVars(value: string): string {
   // Drop var(--x) references but keep any fallback so it gets checked too.
@@ -71,10 +79,7 @@ function valueIsRaw(value: string, prop: string): boolean {
     const num = Number(m[1]);
     const unit = (m[2] ?? "").toLowerCase();
     if (num === 0) continue;
-    if (unit === "%") {
-      if (num === 100 && m[0] === "100%") continue;
-      return true;
-    }
+    if (ALLOWED_UNITS.has(unit)) continue;
     if (unit !== "") return true;
     if (insideMath(rest, m.index ?? 0)) continue;
     if (UNITLESS_PROPS.has(prop)) continue;

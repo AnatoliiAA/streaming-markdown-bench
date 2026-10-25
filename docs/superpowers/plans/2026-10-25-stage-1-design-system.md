@@ -217,13 +217,7 @@ test("contrast() matches WCAG reference values", () => { expect(contrast("#00000
     - `permissions: contents: read`.
 
     It does NOT push: a push made with `GITHUB_TOKEN` doesn't trigger CI, so the PR head would lack the required `check`.
-  - How an agent refreshes baselines (goes into ds-component step 4 and CLAUDE.md):
-    1. `gh workflow run vr-update.yml --ref <branch>`;
-    2. `gh run watch <id>`;
-    3. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`;
-    4. commit `test(vr): baselines from CI run <id>` and push.
-
-    This is the only way baselines are committed. The PNGs come from Linux, and the push triggers CI normally.
+  - How an agent refreshes baselines: see ds-component step 4 (the single source of truth for the procedure). Rule: baselines are refreshed once per group, after the group's last component and before the group review.
 
 - [ ] **Step 1: Failing tests**
   - `story-index.test.ts`:
@@ -269,7 +263,7 @@ Every component task runs the `ds-component` skill exactly. Step 0 is satisfied 
   5. `bun run check` + `bun run test:browser`;
   6. `component-review` (fresh subagent);
   7. commit `feat(ui): <Name>`;
-  8. the controller pushes, runs the Task 3 baseline-refresh procedure for the branch, and commits the downloaded PNGs.
+  8. baselines are NOT refreshed per component: once per group, after the group's last component and before the group review, the controller follows ds-component step 4.
 
 ---
 
@@ -485,7 +479,7 @@ Two small components, one commit each, one review covering both.
 1. Fonts are self-hosted via @fontsource-variable, for deterministic VR on CI Linux. The accent hue is blue. The exact palette is chosen in Task 2 and gated by the contrast test.
 2. The Bun test CSS-modules plugin maps class keys to themselves. Tests never assert class names; variants are `data-*`.
 3. VR and browser axe live in ONE spec over the Storybook static build, served by `sirv-cli` through the Playwright `webServer`. Screenshot assertions run on Linux only.
-4. Baselines are refreshed by `vr-update.yml` (workflow_dispatch on the PR branch → artifact). The agent downloads and commits them, because a bot push with `GITHUB_TOKEN` wouldn't trigger the required CI check. It never runs on `main`.
+4. Baselines are produced by `vr-update.yml` (label-triggered on the PR; workflow_dispatch only once the workflow is on main) and uploaded as an artifact; the agent downloads and commits them, because a bot push with `GITHUB_TOKEN` wouldn't trigger the required CI check. Procedure: ds-component step 4. Baselines are refreshed once per group, after the group's last component, before the group review.
 5. The global stylesheet is exported as `@smb/ui/styles.css`. How `apps/site` loads it (through `shared/ui` CSS, keeping `site-ui-only-via-shared` strict) is decided in Stage 3.
 6. TS2742: explicit `Meta`/`StoryObj` annotations if needed. Never switch the Bun linker for it.
 7. React 19 + react-aria-components. React is a peer dependency of `@smb/ui`.

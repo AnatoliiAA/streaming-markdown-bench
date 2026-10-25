@@ -26,15 +26,15 @@ The DS foundation must exist: React + react-dom, Testing Library, `axe-core`, Re
 1. **Test first.** `<Name>.test.tsx` is the FIRST file written, before the implementation and before any token. Testing Library asserts behavior (rendered output, keyboard and pointer interaction, each variant and state) plus an `axe-core` check asserting zero violations; never weaken that assertion. Run it and see it fail for the expected reason (missing component or missing behavior). If you need a token that does not exist, add it only after the test is red, as part of making it green.
 2. **Implement (green).** Minimal code to pass.
    - Interactive behavior through React Aria; no hand-rolled key handling or ARIA.
-   - Styles in `<Name>.module.css` using only `var(--…)` tokens. No raw colors/sizes outside `tokens/`. New values become tokens (light and dark).
+   - Styles in `<Name>.module.css` using only `var(--…)` tokens. No raw colors/sizes outside `tokens/`. New values become tokens (light and dark). A new color token must also be added to `COLOR_NAMES` in `tokens/tokens.test.ts` with a contrast pair.
    - Status meaning is never carried by color alone: add text or an icon (Badge match/diff/error/timeout reads without color).
    - Refactor while green.
 3. **Story (mandatory).** `<Name>.stories.tsx` has one story per visual state: every variant, crossed with disabled, focus and error where applicable.
 4. **VR (mandatory).** VR is ONE shared Playwright spec, `tests/browser/stories.pw.ts` (Stage 1 Task 3), that iterates every story in light and dark: axe with all rules (incl. color-contrast) on every platform, screenshots on Linux only. Components never write their own VR spec; a new story is picked up automatically, so step 3 is what adds the screenshots. Tag a story `!vr` only if it cannot be screenshotted deterministically.
    - Baselines are generated ONLY in CI on Linux by `.github/workflows/vr-update.yml`. Never generate or commit them from Windows or macOS dev machines (font rendering differs).
    - Refresh procedure (the only way baselines are committed):
-     1. Start the run. Pre-merge (normal case): `gh pr edit <pr> --add-label update-vr`. On main or without a PR: `gh workflow run vr-update.yml --ref <branch>`.
-     2. `gh run list --workflow vr-update.yml --branch <branch> -L 1 --json databaseId --jq '.[0].databaseId'` gives `<id>`.
+     1. Push the branch first (the run is tied to the pushed HEAD), then start the run. Pre-merge (normal case): `gh pr edit <pr> --add-label update-vr`. On main or without a PR: `gh workflow run vr-update.yml --ref <branch>`.
+     2. `gh run list --workflow vr-update.yml --branch <branch> --commit $(git rev-parse HEAD) --json databaseId,conclusion --jq '[.[] | select(.conclusion != "skipped")][0].databaseId'` gives `<id>`; the run takes a moment to appear, so retry in a short loop (at most 60 s) until it returns an id.
      3. `gh run watch <id>`
      4. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`
      5. Commit `test(vr): baselines from CI run <id>` and push.

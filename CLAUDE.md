@@ -53,10 +53,10 @@ Playwright runs under Node, not Bun: `test:browser` = `bunx playwright test`; re
 
 `tests/browser/stories.pw.ts` iterates every story in the Storybook index (except tags `!vr`) in light and dark: axe (all rules) everywhere, screenshots only on Linux (`shouldAssertScreenshots`). Baselines live in `tests/browser/__screenshots__/` and come only from CI (`.github/workflows/vr-update.yml`, which uploads artifact `vr-baselines` and never pushes):
 
-1. Start the run.
+1. Push the branch first (the run is tied to the pushed HEAD), then start the run.
    - Pre-merge (normal case): `gh pr edit <pr> --add-label update-vr`.
    - On main or without a PR: `gh workflow run vr-update.yml --ref <branch>` (workflow_dispatch only works once the workflow is on main).
-2. `gh run list --workflow vr-update.yml --branch <branch> -L 1 --json databaseId --jq '.[0].databaseId'` gives `<id>`.
+2. `gh run list --workflow vr-update.yml --branch <branch> --commit $(git rev-parse HEAD) --json databaseId,conclusion --jq '[.[] | select(.conclusion != "skipped")][0].databaseId'` gives `<id>`; the run takes a moment to appear, so retry in a short loop (at most 60 s) until it returns an id.
 3. `gh run watch <id>`
 4. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`
 5. Commit `test(vr): baselines from CI run <id>` and push (the push triggers CI normally).

@@ -12,7 +12,9 @@ Portfolio repo: a benchmark of streaming-markdown renderers (`packages/bench`), 
 | `bun run test:tooling` | `bun test ./tests/tooling`: slow tooling tests (clone the repo, run the boundary matrix). |
 | `bun run format` | `biome check --write .` |
 | `bun run lint:arch` | Boundary check: dependency-cruiser + steiger (see skill `project-architecture`) |
-| `bun run test:browser` | Playwright (`tests/browser/*.pw.ts`). Not part of `check` (needs a browser); run `bunx playwright install chromium` once per machine. CI runs both. |
+| `bun run test:browser` | Playwright (`tests/browser/*.pw.ts`). Its webServer builds Storybook (`build:storybook`) and serves it on :6007 (reused locally if already running). Not part of `check` (needs a browser); run `bunx playwright install chromium` once per machine. CI runs both. |
+| `bun run storybook` | Storybook dev server for `packages/ui` on :6006. |
+| `bun run build:storybook` | Static Storybook build into `packages/ui/storybook-static` (git- and Biome-ignored). |
 
 Biome ignores all Markdown (`!**/*.md`) and `docs/`.
 
@@ -46,6 +48,21 @@ Small changes skip step 5 but still do TDD and `bun run check`.
 ## Browser tests
 
 Playwright runs under Node, not Bun: `test:browser` = `bunx playwright test`; requires Node ≥ 20 on PATH (bunx otherwise shims node to Bun, which fails). `bunx --bun playwright test` failed 3/3 on Bun 1.4.4 + @playwright/test 1.64.1 (worker process exits with code 1). Retry Bun when either is upgraded. Browser tests are `tests/browser/*.pw.ts`, never `*.spec.ts` (`bun test` would pick those up).
+
+## Visual regression
+
+`tests/browser/stories.pw.ts` iterates every story in the Storybook index (except tags `!vr`) in light and dark: axe (all rules) everywhere, screenshots only on Linux (`shouldAssertScreenshots`). Baselines live in `tests/browser/__screenshots__/` and come only from CI (`.github/workflows/vr-update.yml`, which uploads artifact `vr-baselines` and never pushes):
+
+1. Push the branch first (the run is tied to the pushed HEAD), then start the run.
+   - Pre-merge (normal case): `gh pr edit <pr> --add-label update-vr`.
+   - On main or without a PR: `gh workflow run vr-update.yml --ref <branch>` (workflow_dispatch only works once the workflow is on main).
+2. `gh run list --workflow vr-update.yml --branch <branch> --commit $(git rev-parse HEAD) --json databaseId,conclusion --jq '[.[] | select(.conclusion != "skipped")][0].databaseId'` gives `<id>`; the run takes a moment to appear, so retry in a short loop (at most 60 s) until it returns an id.
+3. `gh run watch <id>`
+4. `gh run download <id> -n vr-baselines -D tests/browser/__screenshots__`
+5. Commit `test(vr): baselines from CI run <id>` and push (the push triggers CI normally).
+6. Label path only: `gh pr edit <pr> --remove-label update-vr`.
+
+When a story is renamed or removed, delete its old PNGs in `tests/browser/__screenshots__` before committing (the download never deletes files).
 
 ## Shell (this machine)
 

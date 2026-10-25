@@ -6,7 +6,7 @@
     "declaration": true,
     "tsBuildInfoFile": "../../node_modules/.cache/tsc/ui.tsbuildinfo",
     "outDir": "../../node_modules/.cache/tsc/ui",
-    "rootDir": "src"
+    "rootDir": "."
   },
-  "include": ["src"]
+  "include": ["src", ".storybook/*.ts", ".storybook/*.tsx"]
 }
